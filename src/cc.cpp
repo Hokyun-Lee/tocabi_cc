@@ -34,12 +34,15 @@ void CustomController::PublishHapticData()
 
 void CustomController::computeSlow()
 {
-    //MODE 6,7,8,9 is reserved for cc
+    //MODE 6,7,8 is reserved for cc
     queue_cc_.callAvailable(ros::WallDuration());
 
-    //CC for HK
-    //TESTTESTTEST
-    if (rd_.tc_.mode == 6)
+    //CC for Hokyun Lee(hkleetony@snu.ac.kr)
+    
+    if (rd_.tc_.mode == 8){
+
+    }
+    else if (rd_.tc_.mode == 6)
     {   
         double ang2rad = 0.0174533;
 
