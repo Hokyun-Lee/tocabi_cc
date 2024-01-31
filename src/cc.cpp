@@ -37,7 +37,8 @@ void CustomController::computeSlow()
     //MODE 6,7,8,9 is reserved for cc
     queue_cc_.callAvailable(ros::WallDuration());
 
-    //CC for HKasdfasdf
+    //CC for HK
+    //TESTTESTTEST
     if (rd_.tc_.mode == 6)
     {   
         double ang2rad = 0.0174533;
