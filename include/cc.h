@@ -11,7 +11,7 @@
 class CustomController
 {
 public:
-    CustomController(RobotData &rd);
+    CustomController(DWBC::RobotData drd);
     Eigen::VectorQd getControl();
 
     //void taskCommandToCC(TaskCommand tc_);
@@ -42,6 +42,9 @@ public:
     //TaskCommand tc;
 
     double haptic_force_[3];
+
+    //for HK
+
 
 private:
     Eigen::VectorQd ControlVal_;
