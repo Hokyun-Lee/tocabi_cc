@@ -11,7 +11,7 @@
 class CustomController
 {
 public:
-    CustomController(DWBC::RobotData drd);
+    CustomController(RobotData &rd);
     Eigen::VectorQd getControl();
 
     //void taskCommandToCC(TaskCommand tc_);

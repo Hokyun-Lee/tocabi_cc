@@ -9,6 +9,7 @@ tocabi_lib
 tocabi_msgs
 eigen_conversions
 )
+find_package(dwbc REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -22,8 +23,9 @@ catkin_package(
 ###########
 
 include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${dwbc_DIRS}
 )
 
 add_library(${PROJECT_NAME} STATIC
@@ -33,6 +35,7 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  dwbc
 )
 
 install(TARGETS ${PROJECT_NAME}
