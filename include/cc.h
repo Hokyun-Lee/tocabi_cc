@@ -6,6 +6,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 
+#include <vector>
+
 class CustomController
 {
 public:
@@ -30,10 +32,10 @@ public:
     void initVariable();
     Eigen::Vector3d mat2euler(Eigen::Matrix3d mat);
 
-    static const int num_action = 13;
-    static const int num_actuator_action = 12;
-    static const int num_cur_state = 50;
-    static const int num_cur_internal_state = 37;
+    static const int num_action = 21;
+    static const int num_actuator_action = 20;
+    static const int num_cur_state = 58;
+    static const int num_cur_internal_state = 45;
     static const int num_state_skip = 2;
     static const int num_state_hist = 5;
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
@@ -111,6 +113,16 @@ public:
 
     double target_vel_x_ = 0.0;
     double target_vel_y_ = 0.0;
+
+    std::vector<int> joint_pd_index = {12,
+                                       15, 18, 20, 21, 22,
+                                       23, 24,
+                                       25, 28, 30, 31, 32};
+    std::vector<int> actuator_action_index = {0, 1, 2, 3, 4,  5,
+                                              6, 7, 8, 9, 10, 11,
+                                              13, 14,
+                                              16,17,19,
+                                              26,27,29};
 
 private:
     Eigen::VectorQd ControlVal_;

@@ -487,6 +487,8 @@ void CustomController::processObservation()
         state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
         data_idx++;
     }
+
+    //phase
     state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
     data_idx++;
     
@@ -618,13 +620,23 @@ void CustomController::computeSlow()
             time_inference_pre_ = rd_cc_.control_time_us_;
         }
 
-        for (int i = 0; i < num_actuator_action; i++)
+        // for (int i = 0; i < num_actuator_action; i++)
+        // {
+        //     torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+        // }
+        // for (int i = num_actuator_action; i < MODEL_DOF; i++)
+        // {
+        //     torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
+        // }
+
+        for (int i : actuator_action_index)
         {
             torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
         }
-        for (int i = num_actuator_action; i < MODEL_DOF; i++)
+        for (int i : joint_pd_index)
         {
             torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
+
         }
         
         if (rd_cc_.control_time_us_ < start_time_ + 0.1e6)
