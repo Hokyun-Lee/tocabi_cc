@@ -326,13 +326,18 @@ void CustomController::initVariable()
                     64, 64, 64, 64, 23, 23, 10, 10,
                     10, 10,
                     64, 64, 64, 64, 23, 23, 10, 10;  
-                    
-    q_init_ << 0.0, 0.0, -0.24, 0.6, -0.36, 0.0,
+    // q_init_ <<  0.0, 0.0, -0.24, 0.6, -0.36, 0.0,
+    //             0.0, 0.0, -0.24, 0.6, -0.36, 0.0,
+    //             0.0, 0.0, 0.0,
+    //             0.3, 0.3, 1.5, -1.27, -1.0, 0.0, -1.0, 0.0,
+    //             0.0, 0.0,
+    //             -0.3, -0.3, -1.5, 1.27, 1.0, 0.0, 1.0, 0.0;
+    q_init_ <<  0.0, 0.0, -0.24, 0.6, -0.36, 0.0,
                 0.0, 0.0, -0.24, 0.6, -0.36, 0.0,
                 0.0, 0.0, 0.0,
-                0.3, 0.3, 1.5, -1.27, -1.0, 0.0, -1.0, 0.0,
+                0.0, 10*Deg2Rad, 70*Deg2Rad, -90*Deg2Rad, -90*Deg2Rad, 0.0, 0.0, 0.0,
                 0.0, 0.0,
-                -0.3, -0.3, -1.5, 1.27, 1.0, 0.0, 1.0, 0.0;
+                0.0, -10*Deg2Rad, -70*Deg2Rad, 90*Deg2Rad, 90*Deg2Rad, 0.0, 0.0, 0.0;
 
     kp_.setZero();
     kv_.setZero();
@@ -342,7 +347,7 @@ void CustomController::initVariable()
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0,
                         100.0, 100.0,
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0;
-    kv_.diagonal() << 15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
+    kv_.diagonal() <<   15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         200.0, 100.0, 100.0,
                         10.0, 28.0, 10.0, 10.0, 10.0, 10.0, 3.0, 3.0,
@@ -412,6 +417,7 @@ void CustomController::processNoise()
 void CustomController::processObservation()
 {
     int data_idx = 0;
+    state_cur_.setZero();
 
     Eigen::Quaterniond q;
     q.x() = rd_cc_.q_virtual_(3);
@@ -422,18 +428,25 @@ void CustomController::processObservation()
     euler_angle_ = DyrosMath::rot2Euler_tf(q.toRotationMatrix());
 
     state_cur_(data_idx) = euler_angle_(0);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(1);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(2);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
-
 
     for (int i = 0; i < num_actuator_action; i++)
     {
         state_cur_(data_idx) = q_noise_(i);
+        std::cout << "data_idx : " << data_idx << std::endl;
+        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
@@ -447,6 +460,8 @@ void CustomController::processObservation()
         {
             state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6); //q_vel_noise_(i);
         }
+        std::cout << "data_idx : " << data_idx << std::endl;
+        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
@@ -454,42 +469,70 @@ void CustomController::processObservation()
     phase_ = std::fmod((rd_cc_.control_time_us_-start_time_)/1e6 + action_dt_accumulate_, squat_duration) / squat_duration;
 
     state_cur_(data_idx) = sin(2*M_PI*phase_);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
+
     state_cur_(data_idx) = cos(2*M_PI*phase_);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = 0.2;//target_vel_x_;
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = 0.0;//target_vel_y_;
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(2);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(2);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(3);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(3);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(4);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(4);
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     for (int i = 0; i <num_actuator_action; i++) 
     {
         state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
+        std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);" << data_idx << std::endl;
+        std::cout << "int i :" << i << std::endl;
+        std::cout << "data_idx : " << data_idx << std::endl;
+        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
     //phase
     state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
+    std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);" << data_idx << std::endl;
+    std::cout << "data_idx : " << data_idx << std::endl;
+    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
     
     state_buffer_.block(0, 0, num_cur_state*(num_state_skip*num_state_hist-1),1) = state_buffer_.block(num_cur_state, 0, num_cur_state*(num_state_skip*num_state_hist-1),1);
@@ -551,6 +594,67 @@ void CustomController::computeSlow()
     {
         if (rd_cc_.tc_init)
         {
+            // Initial pose
+            ref_q_ = rd_.q_;
+            for (int i = 0; i < 12; i++)
+            {
+                Initial_ref_q_(i) = ref_q_(i);
+            }
+
+            // Saving for initial upper body pose
+            // edited by MJ (Initial upper body trajectory generation for CAM control /220110)
+            // edited by HK (Initial upper body for RL /240314)
+            upper_init_q_.setZero();
+            Initial_ref_upper_q_.setZero();
+            for (int i = 12; i < MODEL_DOF; i++)
+            {
+                Initial_ref_upper_q_(i) = ref_q_(i);
+            }
+            upper_init_q_(16) = +10.0 * Deg2Rad;
+            upper_init_q_(17) = +70.0 * Deg2Rad; // Rolling dist +70.0 deg
+            upper_init_q_(18) = -90.0 * Deg2Rad; //-90.0
+            upper_init_q_(19) = -90.0 * Deg2Rad; //-90.0
+
+            upper_init_q_(26) = -10.0 * Deg2Rad;
+            upper_init_q_(27) = -70.0 * Deg2Rad; // Rolling dist -70.0 deg
+            upper_init_q_(28) = +90.0 * Deg2Rad; //+90.0
+            upper_init_q_(29) = +90.0 * Deg2Rad; //+90.0
+            
+            upper_init_tick_hk_ = 0;
+            // parameterSetting();
+            cout << "computeslow upper init mode = 7 is initialized" << endl;
+            cout << "time: "<<rd_.control_time_ << endl;
+
+            WBC::SetContact(rd_, 1, 1);
+            Gravity_= WBC::ContactForceRedistributionTorqueWalking(rd_, WBC::GravityCompensationTorque(rd_), 0.9, 1, 0);
+            rd_.tc_init = false;
+        }
+
+        // edited by MJ (Initial upper body trajectory generation for CAM control /220110)
+        if(upper_init_tick_hk_ <= 2.0 * hz_)
+        {
+            ref_q_(16) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(16), upper_init_q_(16), 0.0, 0.0);
+            ref_q_(17) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(17), upper_init_q_(17), 0.0, 0.0);
+            ref_q_(18) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(18), upper_init_q_(18), 0.0, 0.0);
+            ref_q_(19) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(19), upper_init_q_(19), 0.0, 0.0);
+
+            ref_q_(26) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(26), upper_init_q_(26), 0.0, 0.0);
+            ref_q_(27) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(27), upper_init_q_(27), 0.0, 0.0);
+            ref_q_(28) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(28), upper_init_q_(28), 0.0, 0.0);
+            ref_q_(29) = DyrosMath::cubic(upper_init_tick_hk_, 0, 2.0 * hz_, Initial_ref_upper_q_(29), upper_init_q_(29), 0.0, 0.0);
+
+            upper_init_tick_hk_++;         
+        }
+        
+        for (int i = 0; i < MODEL_DOF; i++)
+        {
+            rd_.torque_desired(i) = kp_(i,i) * (ref_q_(i) - rd_.q_(i)) - kv_(i,i) * rd_.q_dot_(i) + 1.0 * Gravity_(i);
+        }   
+    }
+    else if (rd_cc_.tc_.mode == 8)
+    {
+        if (rd_cc_.tc_init)
+        {
             //Initialize settings for Task Control! 
             start_time_ = rd_cc_.control_time_us_;
             q_noise_pre_ = q_noise_ = q_init_ = rd_cc_.q_virtual_.segment(6,MODEL_DOF);
@@ -561,7 +665,7 @@ void CustomController::computeSlow()
             // ft_right_init_ = abs(rd_cc_.RF_FT(2));
 
             rd_.tc_init = false;
-            std::cout<<"cc mode 7"<<std::endl;
+            std::cout<<"cc mode 8 : TOCABIRL kdh0429"<<std::endl;
             torque_init_ = rd_cc_.torque_desired;
 
             processNoise();
@@ -636,7 +740,6 @@ void CustomController::computeSlow()
         for (int i : joint_pd_index)
         {
             torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
-
         }
         
         if (rd_cc_.control_time_us_ < start_time_ + 0.1e6)

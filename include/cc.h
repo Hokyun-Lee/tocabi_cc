@@ -8,6 +8,10 @@
 
 #include <vector>
 
+#define M_PI    3.14159265358979323846
+#define Rad2Deg 180/M_PI
+#define Deg2Rad M_PI/180
+
 class CustomController
 {
 public:
@@ -34,8 +38,8 @@ public:
 
     static const int num_action = 21;
     static const int num_actuator_action = 20;
-    static const int num_cur_state = 50;
-    static const int num_cur_internal_state = 37;
+    static const int num_cur_state = 66;
+    static const int num_cur_internal_state = 49;
     static const int num_state_skip = 2;
     static const int num_state_hist = 5;
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
@@ -74,6 +78,7 @@ public:
     std::ofstream writeFile;
 
     float phase_ = 0.0;
+    // float pi = 3.1415926535;
 
     bool is_on_robot_ = false;
     bool is_write_file_ = true;
@@ -113,6 +118,15 @@ public:
 
     double target_vel_x_ = 0.0;
     double target_vel_y_ = 0.0;
+
+    // HK
+    Eigen::VectorQd ref_q_;
+    int upper_init_tick_hk_ = 0;
+    double hz_ = 2000.0;
+    Eigen::VectorQd upper_init_q_;
+    Eigen::VectorQd Initial_ref_q_;
+    Eigen::VectorQd Initial_ref_upper_q_;
+    Eigen::VectorQd Gravity_;
 
     std::vector<int> joint_pd_index = {12,
                                        15, 18, 20, 21, 22,
