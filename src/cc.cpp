@@ -417,7 +417,7 @@ void CustomController::processNoise()
 void CustomController::processObservation()
 {
     int data_idx = 0;
-    state_cur_.setZero();
+    // state_cur_.setZero();
 
     Eigen::Quaterniond q;
     q.x() = rd_cc_.q_virtual_(3);
@@ -428,25 +428,25 @@ void CustomController::processObservation()
     euler_angle_ = DyrosMath::rot2Euler_tf(q.toRotationMatrix());
 
     state_cur_(data_idx) = euler_angle_(0);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(1);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(2);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     for (int i = 0; i < num_actuator_action; i++)
     {
         state_cur_(data_idx) = q_noise_(i);
-        std::cout << "data_idx : " << data_idx << std::endl;
-        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+        // std::cout << "data_idx : " << data_idx << std::endl;
+        // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
@@ -460,8 +460,8 @@ void CustomController::processObservation()
         {
             state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6); //q_vel_noise_(i);
         }
-        std::cout << "data_idx : " << data_idx << std::endl;
-        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+        // std::cout << "data_idx : " << data_idx << std::endl;
+        // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
@@ -469,85 +469,88 @@ void CustomController::processObservation()
     phase_ = std::fmod((rd_cc_.control_time_us_-start_time_)/1e6 + action_dt_accumulate_, squat_duration) / squat_duration;
 
     state_cur_(data_idx) = sin(2*M_PI*phase_);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = cos(2*M_PI*phase_);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = 0.2;//target_vel_x_;
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = 0.0;//target_vel_y_;
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(2);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(2);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(3);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(3);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(4);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.RF_FT(4);
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
     for (int i = 0; i <num_actuator_action; i++) 
     {
         state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
-        std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);" << data_idx << std::endl;
-        std::cout << "int i :" << i << std::endl;
-        std::cout << "data_idx : " << data_idx << std::endl;
-        std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+        // std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);" << std::endl;
+        // std::cout << "int i :" << i << std::endl;
+        // std::cout << "data_idx : " << data_idx << std::endl;
+        // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
     //phase
     state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
-    std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);" << data_idx << std::endl;
-    std::cout << "data_idx : " << data_idx << std::endl;
-    std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    // std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);" << std::endl;
+    // std::cout << "data_idx : " << data_idx << std::endl;
+    // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
     
     state_buffer_.block(0, 0, num_cur_state*(num_state_skip*num_state_hist-1),1) = state_buffer_.block(num_cur_state, 0, num_cur_state*(num_state_skip*num_state_hist-1),1);
     state_buffer_.block(num_cur_state*(num_state_skip*num_state_hist-1), 0, num_cur_state,1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
+
 
     // Internal State First
     for (int i = 0; i < num_state_hist; i++)
     {
         state_.block(num_cur_internal_state*i, 0, num_cur_internal_state, 1) = state_buffer_.block(num_cur_state*(num_state_skip*(i+1)-1), 0, num_cur_internal_state, 1);
     }
+
     // Action History Second
     for (int i = 0; i < num_state_hist-1; i++)
     {
         state_.block(num_state_hist*num_cur_internal_state + num_action*i, 0, num_action, 1) = state_buffer_.block(num_cur_state*(num_state_skip*(i+1)) + num_cur_internal_state, 0, num_action, 1);
     }
+
 
 }
 
@@ -584,6 +587,8 @@ void CustomController::feedforwardPolicy()
     }
 
     value_ = (value_net_w_ * value_hidden_layer2_ + value_net_b_)(0);
+    std::cout << "value_ in feedforwardPolicy() : " << value_ << std::endl;
+
     
 }
 
@@ -678,16 +683,21 @@ void CustomController::computeSlow()
 
         processNoise();
 
+
+
         // processObservation and feedforwardPolicy mean time: 15 us, max 53 us
         if ((rd_cc_.control_time_us_ - time_inference_pre_)/1.0e6 >= 1/250.0 - 1/10000.0)
         {
             processObservation();
             feedforwardPolicy();
+
+
             
             action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0);
 
             if (value_ < 50.0)
             {
+                std::cout << "value_ : " << value_ << std::endl;
                 if (stop_by_value_thres_ == false)
                 {
                     stop_by_value_thres_ = true;
@@ -733,15 +743,18 @@ void CustomController::computeSlow()
         //     torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
         // }
 
-        for (int i : actuator_action_index)
+        for (int i = 0; i < actuator_action_index.size(); i++)
         {
             torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+
         }
+
         for (int i : joint_pd_index)
         {
             torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
         }
-        
+
+
         if (rd_cc_.control_time_us_ < start_time_ + 0.1e6)
         {
             for (int i = 0; i <MODEL_DOF; i++)
@@ -754,6 +767,8 @@ void CustomController::computeSlow()
         {
              rd_.torque_desired = torque_rl_;
         }
+
+
 
         if (stop_by_value_thres_)
         {
