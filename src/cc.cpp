@@ -10,7 +10,7 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     {
         if (is_on_robot_)
         {
-            writeFile.open("/home/dyros/catkin_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/hokyun20/RL_cc_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
         }
         else
         {
@@ -35,7 +35,7 @@ void CustomController::loadNetwork()
     rl_action_.setZero();
 
 
-    string cur_path = "/home/dyros20/rl_ws/src/tocabi_cc/";
+    string cur_path = "/home/hokyun20/RL_cc_ws/src/tocabi_cc/";
 
     if (is_on_robot_)
     {
@@ -484,6 +484,10 @@ void CustomController::processObservation()
     state_cur_(data_idx) = rd_cc_.RF_FT(4);
     data_idx++;
 
+    // state_cur_(data_idx) = 0.2;//target_ang_vel_yaw_;
+    state_cur_(data_idx) = target_ang_vel_yaw_;//target_ang_vel_yaw_;
+    data_idx++;
+
     for (int i = 0; i <num_actuator_action; i++) 
     {
         state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
@@ -584,14 +588,14 @@ void CustomController::computeSlow()
 
             if (value_ < 30.0)
             {
-                // if (stop_by_value_thres_ == false)
-                // {
-                //     stop_by_value_thres_ = true;
-                //     stop_start_time_ = rd_cc_.control_time_us_;
-                //     q_stop_ = q_noise_;
-                //     std::cout << "Stop by Value Function" << std::endl;
-                //     std::cout << "value_ : " << value_ << std::endl;
-                // }
+                if (stop_by_value_thres_ == false)
+                {
+                    stop_by_value_thres_ = true;
+                    stop_start_time_ = rd_cc_.control_time_us_;
+                    q_stop_ = q_noise_;
+                    std::cout << "Stop by Value Function" << std::endl;
+                    std::cout << "value_ : " << value_ << std::endl;
+                }
                 std::cout << "value_ : " << value_ << std::endl;
 
             }
@@ -675,6 +679,7 @@ void CustomController::copyRobotData(RobotData &rd_l)
 
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
+    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.5, 0.8);
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
+    target_ang_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.3, 0.3);
 }
