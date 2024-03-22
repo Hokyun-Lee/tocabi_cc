@@ -442,15 +442,36 @@ void CustomController::processObservation()
     // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
-    for (int i = 0; i < num_actuator_action; i++)
+    // for (int i = 0; i < num_actuator_action; i++)
+    // {
+    //     state_cur_(data_idx) = q_noise_(i);
+    //     // std::cout << "data_idx : " << data_idx << std::endl;
+    //     // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    //     data_idx++;
+    // }
+
+    for (int i : actuator_action_index)
     {
         state_cur_(data_idx) = q_noise_(i);
-        // std::cout << "data_idx : " << data_idx << std::endl;
-        // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
     }
 
-    for (int i = 0; i < num_actuator_action; i++)
+    // for (int i = 0; i < num_actuator_action; i++)
+    // {
+    //     if (is_on_robot_)
+    //     {
+    //         state_cur_(data_idx) = q_vel_noise_(i);
+    //     }
+    //     else
+    //     {
+    //         state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6); //q_vel_noise_(i);
+    //     }
+    //     // std::cout << "data_idx : " << data_idx << std::endl;
+    //     // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
+    //     data_idx++;
+    // }
+
+    for (int i : actuator_action_index)
     {
         if (is_on_robot_)
         {
@@ -460,9 +481,8 @@ void CustomController::processObservation()
         {
             state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6); //q_vel_noise_(i);
         }
-        // std::cout << "data_idx : " << data_idx << std::endl;
-        // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
         data_idx++;
+
     }
 
     float squat_duration = 1.7995;
@@ -478,7 +498,8 @@ void CustomController::processObservation()
     // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
 
-    state_cur_(data_idx) = 0.2;//target_vel_x_;
+    // state_cur_(data_idx) = 0.2;//target_vel_x_;
+    state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
     // std::cout << "data_idx : " << data_idx << std::endl;
     // std::cout << "state_cur_ : \n" << state_cur_ << std::endl << std::endl;
     data_idx++;
@@ -528,7 +549,6 @@ void CustomController::processObservation()
         data_idx++;
     }
 
-    //phase
     state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
     // std::cout << "state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);" << std::endl;
     // std::cout << "data_idx : " << data_idx << std::endl;
@@ -697,14 +717,17 @@ void CustomController::computeSlow()
 
             if (value_ < 50.0)
             {
+                // std::cout << "value_ : " << value_ << std::endl;
+                // if (stop_by_value_thres_ == false)
+                // {
+                //     stop_by_value_thres_ = true;
+                //     stop_start_time_ = rd_cc_.control_time_us_;
+                //     q_stop_ = q_noise_;
+                //     std::cout << "Stop by Value Function" << std::endl;
+                // }
+                std::cout << "Warning by Value Function" << std::endl;
                 std::cout << "value_ : " << value_ << std::endl;
-                if (stop_by_value_thres_ == false)
-                {
-                    stop_by_value_thres_ = true;
-                    stop_start_time_ = rd_cc_.control_time_us_;
-                    q_stop_ = q_noise_;
-                    std::cout << "Stop by Value Function" << std::endl;
-                }
+
             }
 
             if (is_write_file_)
@@ -743,10 +766,16 @@ void CustomController::computeSlow()
         //     torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
         // }
 
-        for (int i = 0; i < actuator_action_index.size(); i++)
-        {
-            torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+        // for (int i = 0; i < actuator_action_index.size(); i++)
+        // {
+        //     torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+        // }
 
+        int action_idx_ = 0;
+        for (int i : actuator_action_index)
+        {
+            torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(action_idx_)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+            action_idx_++;
         }
 
         for (int i : joint_pd_index)
