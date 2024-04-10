@@ -6,6 +6,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <libdwbc/dwbc.h>
 
 
 class CustomController
@@ -28,6 +29,8 @@ public:
 
     RobotData &rd_;
     RobotData rd_cc_;
+
+    DWBC::RobotData drd_;
 
     ros::NodeHandle nh_cc_;
     ros::CallbackQueue queue_cc_;

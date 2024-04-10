@@ -10,6 +10,17 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     haptic_force_pub_ = nh_cc_.advertise<geometry_msgs::Vector3>("/haptic/force", 10);
     // example_subsciber = nh_cc_.subscribe("/some/topic",10,&CustomController::myCallback,this);
     ControlVal_.setZero();
+
+    string urdf_path;
+
+    ros::param::get("/tocabi_controller/urdf_path", urdf_path);
+
+    drd_.LoadModelData(urdf_path, true, true);
+
+    drd_.AddContactConstraint("l_ankleroll_link", DWBC::CONTACT_TYPE::CONTACT_6D, Vector3d(0.03, 0, -0.1585), Vector3d(0, 0, 1), 0.15, 0.075);
+    drd_.AddContactConstraint("r_ankleroll_link", DWBC::CONTACT_TYPE::CONTACT_6D, Vector3d(0.03, 0, -0.1585), Vector3d(0, 0, 1), 0.15, 0.075);
+    drd_.AddContactConstraint("l_wrist2_link", DWBC::CONTACT_TYPE::CONTACT_6D, Vector3d(0.03, 0, -0.1585), Vector3d(0, 0, 1), 0.04, 0.04);
+    drd_.AddContactConstraint("r_wrist2_link", DWBC::CONTACT_TYPE::CONTACT_6D, Vector3d(0.03, 0, -0.1585), Vector3d(0, 0, 1), 0.04, 0.04);
 }
 
 Eigen::VectorQd CustomController::getControl()
@@ -38,145 +49,228 @@ void CustomController::computeSlow()
     queue_cc_.callAvailable(ros::WallDuration());
 
     
-    if (rd_.tc_.mode == 6)
-    {   
+    if (rd_.tc_.mode == 8)
+    {
+        static double time_start_mode2 = 0.0;
         double ang2rad = 0.0174533;
+        drd_.UpdateKinematics(rd_.q_virtual_, rd_.q_dot_virtual_, rd_.q_ddot_virtual_);
+        drd_.control_time_ = rd_.control_time_;
+
+        int drd_lh_id = drd_.getLinkID("l_wrist2_link");
+        int drd_rh_id = drd_.getLinkID("r_wrist2_link");
+        int drd_ub_id = drd_.getLinkID("upperbody_link");
+        int drd_pl_id = drd_.getLinkID("pelvis_link");
+        int drd_com_id = drd_.getLinkID("COM");
 
         static bool init_qp;
-        
-        static VectorQd init_q_mode6;
-
-        static Matrix3d rot_hand_init;
-        static Matrix3d rot_haptic_init;
-
-        static Vector3d pos_hand_init;
-        static Vector3d pos_haptic_init;
-
-
         if (rd_.tc_init)
         {
+
+            if (rd_.tc_.customTaskGain)
+            {
+                rd_.link_[Pelvis].SetGain(rd_.tc_.pos_p, rd_.tc_.pos_d, rd_.tc_.acc_p, rd_.tc_.ang_p, rd_.tc_.ang_d, 1);
+                rd_.link_[Upper_Body].SetGain(rd_.tc_.pos_p, rd_.tc_.pos_d, rd_.tc_.acc_p, rd_.tc_.ang_p, rd_.tc_.ang_d, 1);
+            }
+
             init_qp = true;
 
-            std::cout << "mode 6 init!" << std::endl;
+            if (rd_.tc_.solver == 0)
+            {
+                std::cout << "TASK MODE 0 : 2LEVEL TASK EXPERIMENT :::: ORIGINAL " << std::endl;
+            }
+            else if (rd_.tc_.solver == 1)
+            {
+                std::cout << "TASK MODE 0 : 2LEVEL TASK EXPERIMENT :::: REDUCED " << std::endl;
+            }
             rd_.tc_init = false;
             rd_.link_[COM_id].x_desired = rd_.link_[COM_id].x_init;
+            drd_.ClearTaskSpace();
+            // drd_.AddTaskSpace(DWBC::TASK_CUSTOM, 6);
+            drd_.AddTaskSpace(0, DWBC::TASK_LINK_POSITION, "COM", Vector3d::Zero());
 
-            init_q_mode6 = rd_.q_;
+            if (rd_.tc_.maintain_lc)
+            {
+                std::cout << "maintain lc" << std::endl;
+                rd_.link_[COM_id].x_init = rd_.link_[Pelvis].x_desired;
 
-            rot_hand_init = rd_.link_[Right_Hand].rotm;
-            rot_haptic_init = haptic_orientation_;
+                rd_.link_[Pelvis].rot_init = rd_.link_[Pelvis].rot_desired;
 
-            pos_hand_init = rd_.link_[Right_Hand].xpos;
-            pos_haptic_init = haptic_pos_;
+                rd_.link_[Upper_Body].rot_init = rd_.link_[Upper_Body].rot_desired;
 
+                rd_.link_[Left_Hand].x_init = rd_.link_[Left_Hand].x_desired;
+                rd_.link_[Left_Hand].rot_init = drd_.ts_[3].task_link_[0].rot_traj;
+
+                rd_.link_[Right_Hand].x_init = rd_.link_[Right_Hand].x_desired;
+                rd_.link_[Right_Hand].rot_init = drd_.ts_[3].task_link_[1].rot_traj;
+            }
+
+            rd_.link_[Pelvis].x_desired = rd_.tc_.ratio * rd_.link_[Left_Foot].x_init + (1 - rd_.tc_.ratio) * rd_.link_[Right_Foot].x_init;
+            rd_.link_[Pelvis].x_desired(2) = rd_.tc_.height;
+            rd_.link_[Pelvis].rot_desired = DyrosMath::Euler2rot(0, rd_.tc_.pelv_pitch * ang2rad, rd_.link_[Pelvis].yaw_init);
+            rd_.link_[Upper_Body].rot_desired = DyrosMath::Euler2rot(rd_.tc_.roll * ang2rad, rd_.tc_.pitch * ang2rad, rd_.tc_.yaw * ang2rad + rd_.link_[Pelvis].yaw_init);
+
+            Vector3d com_diff = rd_.link_[Pelvis].x_desired - rd_.link_[COM_id].x_init;
+
+            rd_.link_[Left_Hand].x_desired = rd_.link_[Left_Hand].x_init + com_diff;
+            rd_.link_[Right_Hand].x_desired = rd_.link_[Right_Hand].x_init + com_diff;
+
+            drd_.ts_[0].task_link_[0].SetTaskGain(rd_.link_[0].pos_p_gain, rd_.link_[0].pos_d_gain, rd_.link_[0].pos_a_gain, rd_.link_[0].rot_p_gain, rd_.link_[0].rot_d_gain, rd_.link_[0].rot_a_gain);
+            drd_.ts_[0].task_link_[0].SetTrajectoryQuintic(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[COM_id].x_init, Vector3d::Zero(), rd_.link_[Pelvis].x_desired, Vector3d::Zero());
+            // drd_.ts_[0].SetTrajectoryRotation(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Pelvis].rot_init, Vector3d::Zero(), rd_.link_[Pelvis].rot_desired, Vector3d::Zero());
+
+            drd_.AddTaskSpace(1, DWBC::TASK_LINK_ROTATION, "pelvis_link", Vector3d::Zero());
+            drd_.ts_[1].task_link_[0].SetTaskGain(rd_.link_[0].pos_p_gain, rd_.link_[0].pos_d_gain, rd_.link_[0].pos_a_gain, rd_.link_[0].rot_p_gain, rd_.link_[0].rot_d_gain, rd_.link_[0].rot_a_gain);
+            drd_.ts_[1].task_link_[0].SetTrajectoryRotation(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Pelvis].rot_init, Vector3d::Zero(), rd_.link_[Pelvis].rot_desired, Vector3d::Zero());
+
+            drd_.AddTaskSpace(2, DWBC::TASK_LINK_ROTATION, "upperbody_link", Vector3d::Zero());
+            drd_.ts_[2].task_link_[0].SetTaskGain(rd_.link_[0].pos_p_gain, rd_.link_[0].pos_d_gain, rd_.link_[0].pos_a_gain, rd_.link_[0].rot_p_gain, rd_.link_[0].rot_d_gain, rd_.link_[0].rot_a_gain);
+            drd_.ts_[2].task_link_[0].SetTrajectoryRotation(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Upper_Body].rot_init, Vector3d::Zero(), rd_.link_[Upper_Body].rot_desired, Vector3d::Zero());
+
+            drd_.AddTaskSpace(3, DWBC::TASK_LINK_6D, "l_wrist2_link", Vector3d::Zero());
+            drd_.ts_[3].task_link_[0].SetTaskGain(rd_.link_[0].pos_p_gain, rd_.link_[0].pos_d_gain, rd_.link_[0].pos_a_gain, rd_.link_[0].rot_p_gain, rd_.link_[0].rot_d_gain, rd_.link_[0].rot_a_gain);
+            drd_.ts_[3].task_link_[0].SetTrajectoryQuintic(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Left_Hand].x_init, Vector3d::Zero(), rd_.link_[Left_Hand].x_desired, Vector3d::Zero());
+            drd_.ts_[3].task_link_[0].SetTrajectoryRotation(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Left_Hand].rot_init, Vector3d::Zero(), rd_.link_[Left_Hand].rot_init, Vector3d::Zero());
+
+            drd_.AddTaskSpace(3, DWBC::TASK_LINK_6D, "r_wrist2_link", Vector3d::Zero());
+            drd_.ts_[3].task_link_[1].SetTaskGain(rd_.link_[0].pos_p_gain, rd_.link_[0].pos_d_gain, rd_.link_[0].pos_a_gain, rd_.link_[0].rot_p_gain, rd_.link_[0].rot_d_gain, rd_.link_[0].rot_a_gain);
+            drd_.ts_[3].task_link_[1].SetTrajectoryQuintic(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Right_Hand].x_init, Vector3d::Zero(), rd_.link_[Right_Hand].x_desired, Vector3d::Zero());
+            drd_.ts_[3].task_link_[1].SetTrajectoryRotation(rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Right_Hand].rot_init, Vector3d::Zero(), rd_.link_[Right_Hand].rot_init, Vector3d::Zero());
         }
 
-        WBC::SetContact(rd_, rd_.tc_.left_foot, rd_.tc_.right_foot, rd_.tc_.left_hand, rd_.tc_.right_hand);
-        if (rd_.tc_.customTaskGain)
+        int d1, d2, d3, d4, d5;
+        std::chrono::time_point<std::chrono::steady_clock> t0, t1, t2, t3, t4, t5;
+
+        int ret1, ret2;
+
+        if (rd_.tc_.solver == 0)
         {
-            rd_.link_[Pelvis].SetGain(rd_.tc_.pos_p, rd_.tc_.pos_d, rd_.tc_.acc_p, rd_.tc_.ang_p, rd_.tc_.ang_d, 1);
-            rd_.link_[Upper_Body].SetGain(rd_.tc_.pos_p, rd_.tc_.pos_d, rd_.tc_.acc_p, rd_.tc_.ang_p, rd_.tc_.ang_d, 1);
-            rd_.link_[Right_Hand].SetGain(rd_.tc_.pos_p, rd_.tc_.pos_d, rd_.tc_.acc_p, rd_.tc_.ang_p, rd_.tc_.ang_d, 1);
+            std::cout << "rd_.tc_.solver == 0" << std:: endl;
+
+
+            t0 = std::chrono::steady_clock::now();
+
+            drd_.SetContact(1, 1);
+            drd_.CalcContactConstraint();
+            drd_.CalcGravCompensation();
+
+            t1 = std::chrono::steady_clock::now();
+
+            drd_.CalcTaskSpace();
+
+            t2 = std::chrono::steady_clock::now();
+
+            ret1 = drd_.CalcTaskControlTorque(true, init_qp, false);
+
+            t3 = std::chrono::steady_clock::now();
+
+            ret2 = drd_.CalcContactRedistribute(true, init_qp);
+
+            t4 = std::chrono::steady_clock::now();
+
+            t5 = std::chrono::steady_clock::now();
         }
-
-        rd_.link_[Pelvis].x_desired = rd_.tc_.ratio * rd_.link_[Left_Foot].x_init + (1 - rd_.tc_.ratio) * rd_.link_[Right_Foot].x_init;
-        rd_.link_[Pelvis].x_desired(2) = rd_.tc_.height;
-        rd_.link_[Pelvis].rot_desired = DyrosMath::rotateWithY(rd_.tc_.pelv_pitch * ang2rad) * DyrosMath::rotateWithZ(rd_.link_[Pelvis].yaw_init);
-
-        rd_.link_[Right_Hand].x_desired = rd_.link_[Right_Hand].x_init;
-        rd_.link_[Right_Hand].x_desired(0) += rd_.tc_.r_x;
-        rd_.link_[Right_Hand].x_desired(1) += rd_.tc_.r_y;
-        rd_.link_[Right_Hand].x_desired(2) += rd_.tc_.r_z;
-        rd_.link_[Right_Hand].rot_desired = DyrosMath::rotateWithX(rd_.tc_.r_roll * ang2rad) * DyrosMath::rotateWithY(rd_.tc_.r_pitch * ang2rad) * DyrosMath::rotateWithZ(rd_.tc_.r_yaw * ang2rad) * DyrosMath::Euler2rot(0, 1.5708, -1.5708).transpose();
-        // rd_.link_[Right_Hand].rot_desired = DyrosMath::rotateWithX(rd_.tc_.r_roll * ang2rad) * DyrosMath::rotateWithY(rd_.tc_.r_pitch * ang2rad) * DyrosMath::rotateWithZ(rd_.tc_.r_yaw * ang2rad);
-
-        rd_.link_[Upper_Body].rot_desired = DyrosMath::rotateWithX(rd_.tc_.roll * ang2rad) * DyrosMath::rotateWithY(rd_.tc_.pitch * ang2rad) * DyrosMath::rotateWithZ(rd_.tc_.yaw * ang2rad);
-
-        rd_.link_[Pelvis].SetTrajectoryQuintic(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, rd_.link_[Pelvis].xi_init, rd_.link_[Pelvis].x_desired);
-        rd_.link_[Pelvis].SetTrajectoryRotation(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time);
-
-        Vector3d hand_pos_desired = haptic_pos_ + pos_hand_init - pos_haptic_init;
-
-        Matrix3d hand_rot_desired = rot_hand_init * rot_haptic_init.transpose() * haptic_orientation_;
-
-        rd_.link_[Right_Hand].SetTrajectoryQuintic(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, hand_pos_desired);
-        //rd_.link_[Right_Hand].SetTrajectoryRotation(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time);
-        rd_.link_[Right_Hand].SetTrajectoryRotation(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time, hand_rot_desired, false);
-
-        std::cout<<"pos"<<std::endl;
-        std::cout<<haptic_pos_<<std::endl;
-        std::cout<<"ori"<<std::endl;
-        std::cout<<haptic_orientation_<< std::endl;
-
-        rd_.link_[Upper_Body].SetTrajectoryRotation(rd_.control_time_, rd_.tc_time_, rd_.tc_time_ + rd_.tc_.time);
-
-        rd_.torque_grav = WBC::GravityCompensationTorque(rd_);
-
-        TaskSpace ts_(6);
-        Eigen::MatrixXd Jtask = rd_.link_[Pelvis].JacCOM();
-        Eigen::VectorXd fstar = WBC::GetFstar6d(rd_.link_[Pelvis], true, true);
-
-        ts_.Update(Jtask, fstar);
-        WBC::CalcJKT(rd_, ts_);
-        WBC::CalcTaskNull(rd_, ts_);
-        static CQuadraticProgram task_qp_;
-        WBC::TaskControlHQP(rd_, ts_, task_qp_, rd_.torque_grav, MatrixXd::Identity(MODEL_DOF, MODEL_DOF), init_qp);
-
-        VectorQd torque_Task2 = ts_.torque_h_ + rd_.torque_grav;
-
-        TaskSpace ts1_(6);
-        Eigen::MatrixXd Jtask1 = rd_.link_[Right_Hand].Jac();
-        Eigen::VectorXd fstar1 = WBC::GetFstar6d(rd_.link_[Right_Hand], true);
-
-        ts1_.Update(Jtask1, fstar1);
-        WBC::CalcJKT(rd_, ts1_);
-        WBC::CalcTaskNull(rd_, ts1_);
-        static CQuadraticProgram task_qp1_;
-        WBC::TaskControlHQP(rd_, ts1_, task_qp1_, torque_Task2, ts_.Null_task, init_qp);
-
-        torque_Task2 = ts_.torque_h_ + ts_.Null_task * ts1_.torque_h_ + rd_.torque_grav;
-
-        TaskSpace ts2_(3);
-        Eigen::MatrixXd Jtask2 = rd_.link_[Upper_Body].Jac().bottomRows(3);
-        Eigen::VectorXd fstar2 = WBC::GetFstarRot(rd_.link_[Upper_Body]);
-        ts2_.Update(Jtask2, fstar2);
-        WBC::CalcJKT(rd_, ts2_);
-
-        static CQuadraticProgram task_qp2_;
-        WBC::TaskControlHQP(rd_, ts2_, task_qp2_, torque_Task2, ts_.Null_task * ts1_.Null_task, init_qp);
-
-        torque_Task2 = ts_.torque_h_ + ts_.Null_task * ts1_.torque_h_ + ts_.Null_task * ts1_.Null_task * ts2_.torque_h_ + rd_.torque_grav;
-
-                    // rd_.torque_desired[i] = rd_.pos_kp_v[i] * (rd_.q_desired[i] - rd_.q_[i]) + rd_.pos_kv_v[i] * (zero_m[i] - rd_.q_dot_[i]);
-        VectorQd torque_pos_hold;
-
-        for (int i=0;i<MODEL_DOF;i++)
+        else if (rd_.tc_.solver == 1)
         {
-            torque_pos_hold[i] = rd_.pos_kp_v[i] * (init_q_mode6[i] - rd_.q_[i]) + rd_.pos_kv_v[i] * ( - rd_.q_dot_[i]);
+            std::cout << "rd_.tc_.solver == 1" << std:: endl;
+            
+
+            t0 = std::chrono::steady_clock::now();
+
+            drd_.SetContact(1, 1);
+            // drd_.CalcContactConstraint();
+            drd_.ReducedDynamicsCalculate();
+            t1 = std::chrono::steady_clock::now();
+
+            drd_.ReducedCalcContactConstraint();
+            drd_.ReducedCalcGravCompensation();
+
+            t2 = std::chrono::steady_clock::now();
+
+            drd_.ReducedCalcTaskSpace();
+
+            t3 = std::chrono::steady_clock::now();
+
+            ret1 = drd_.ReducedCalcTaskControlTorque(true, init_qp, false);
+
+            t4 = std::chrono::steady_clock::now();
+
+            ret2 = drd_.ReducedCalcContactRedistribute(true, init_qp);
+
+            t5 = std::chrono::steady_clock::now();
         }
 
+        d1 = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+        d2 = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+        d3 = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+        d4 = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+        d5 = std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count();
 
-        torque_pos_hold.segment(25,8).setZero();
+        rd_.torque_desired = drd_.torque_task_ + drd_.torque_grav_ + drd_.torque_contact_;
 
-        VectorQd torque_right_arm;
-        
-        torque_right_arm.setZero();
+        // std::cout << "drd_.torque_task_ : \n" << drd_.torque_task_ << std:: endl;
+        // std::cout << "drd_.torque_contact_ : \n" << drd_.torque_contact_ << std:: endl;
+        // std::cout << "drd_.ts_[0].Lambda_task_ : \n" << drd_.ts_[0].Lambda_task_ << std:: endl;
+        // std::cout << "drd_.ts_[0].J_kt_ : \n" << drd_.ts_[0].J_kt_ << std:: endl;
+        // std::cout << "drd_.ts_[0].f_star_ : \n" << drd_.ts_[0].f_star_ << std:: endl;
 
-        torque_right_arm.segment(25,8) = WBC::ContactForceRedistributionTorque(rd_, torque_Task2).segment(25,8);
-
-        rd_.torque_desired = torque_pos_hold + torque_right_arm;
-        
-        std::cout <<"torque" << rd_.RH_CF_FT<< std::endl;
-
-        haptic_force_[0] = rd_.RH_CF_FT[0] * 0.1;
-        haptic_force_[1] = rd_.RH_CF_FT[1]*0.1;
-        haptic_force_[2] = rd_.RH_CF_FT[2]*0.1;
-
-        PublishHapticData();
+        if (!ret1)
+        {
+            rd_.positionControlSwitch = true;
+            std::cout << "task control error" << std::endl;
+        }
+        if (!ret2)
+        {
+            rd_.positionControlSwitch = true;
+            std::cout << "contact control error" << std::endl;
+        }
 
         init_qp = false;
+
+        Vector3d plv_rpy = DyrosMath::rot2Euler(drd_.link_[drd_pl_id].rotm);
+        Vector3d ub_rpy = DyrosMath::rot2Euler(drd_.link_[drd_ub_id].rotm);
+
+        Vector3d plv_rpy_traj = DyrosMath::rot2Euler(drd_.ts_[1].task_link_[0].rot_traj);
+        Vector3d ub_rpy_traj = DyrosMath::rot2Euler(drd_.ts_[2].task_link_[0].rot_traj);
+
+        // tf2::RotationMatrix plv_rot;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (plv_rpy(i) > 0.5 * M_PI)
+            {
+                plv_rpy(i) -= M_PI;
+            }
+            else if (plv_rpy(i) < -0.5 * M_PI)
+            {
+                plv_rpy(i) += M_PI;
+            }
+            if (ub_rpy(i) > 0.5 * M_PI)
+            {
+                ub_rpy(i) -= M_PI;
+            }
+            else if (ub_rpy(i) < -0.5 * M_PI)
+            {
+                ub_rpy(i) += M_PI;
+            }
+            if (plv_rpy_traj(i) > 0.5 * M_PI)
+            {
+                plv_rpy_traj(i) -= M_PI;
+            }
+            else if (plv_rpy_traj(i) < -0.5 * M_PI)
+            {
+                plv_rpy_traj(i) += M_PI;
+            }
+            if (ub_rpy_traj(i) > 0.5 * M_PI)
+            {
+                ub_rpy_traj(i) -= M_PI;
+            }
+            else if (ub_rpy_traj(i) < -0.5 * M_PI)
+            {
+                ub_rpy_traj(i) += M_PI;
+            }
+        }
     }
-    else if (rd_.tc_.mode == 7)
+    else if (rd_.tc_.mode == 9)
     {
         // reserved
     }

@@ -8,6 +8,7 @@ roscpp
 tocabi_lib
 tocabi_msgs
 eigen_conversions
+dwbc
 )
 
 catkin_package(
@@ -22,16 +23,18 @@ catkin_package(
 ###########
 
 include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${dwbc_DIRS}
 )
 
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} STATIC
   src/cc.cpp
 )
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(${PROJECT_NAME}
+  dwbc
   ${catkin_LIBRARIES}
 )
 
