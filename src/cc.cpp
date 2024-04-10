@@ -10,7 +10,7 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     {
         if (is_on_robot_)
         {
-            writeFile.open("/home/hokyun20/RL_cc_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/dyros20/rl_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
         }
         else
         {
@@ -35,7 +35,7 @@ void CustomController::loadNetwork()
     rl_action_.setZero();
 
 
-    string cur_path = "/home/hokyun20/RL_cc_ws/src/tocabi_cc/";
+    string cur_path = "/home/dyros20/rl_ws/src/tocabi_cc/";
 
     if (is_on_robot_)
     {
@@ -458,12 +458,27 @@ void CustomController::processObservation()
     state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
 
+    // if(walking_tick_hk_ < 10000)
+    // {
+    //     target_vel_x_2_ = 0.8 * walking_tick_hk_ / 10000;
+    // }
+    // else if(walking_tick_hk_ < 20000)
+    // {
+    //     target_vel_x_2_ = 0.8 * (20000 - walking_tick_hk_) / 10000;
+    // }
+    // else
+    // {
+    //     target_vel_x_2_ = 0;
+    // }
+
     // state_cur_(data_idx) = 0.2;//target_vel_x_;
     state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
+    // state_cur_(data_idx) = target_vel_x_2_;//target_vel_x_;
+
     data_idx++;
 
-    // state_cur_(data_idx) = 0.0;//target_vel_y_;
-    state_cur_(data_idx) = target_vel_y_;//target_vel_y_;
+    state_cur_(data_idx) = 0.0;//target_vel_y_;
+    // state_cur_(data_idx) = target_vel_y_;//target_vel_y_;
     data_idx++;
 
     state_cur_(data_idx) = rd_cc_.LF_FT(2);
@@ -484,9 +499,9 @@ void CustomController::processObservation()
     state_cur_(data_idx) = rd_cc_.RF_FT(4);
     data_idx++;
 
-    // state_cur_(data_idx) = 0.2;//target_ang_vel_yaw_;
-    state_cur_(data_idx) = target_ang_vel_yaw_;//target_ang_vel_yaw_;
-    data_idx++;
+    // // state_cur_(data_idx) = 0.2;//target_ang_vel_yaw_;
+    // state_cur_(data_idx) = target_ang_vel_yaw_;//target_ang_vel_yaw_;
+    // data_idx++;
 
     for (int i = 0; i <num_actuator_action; i++) 
     {
@@ -564,6 +579,8 @@ void CustomController::computeSlow()
             // ft_left_init_ = abs(rd_cc_.LF_FT(2));
             // ft_right_init_ = abs(rd_cc_.RF_FT(2));
 
+            walking_tick_hk_ = 0;
+
             rd_.tc_init = false;
             std::cout<<"cc mode 7"<<std::endl;
             torque_init_ = rd_cc_.torque_desired;
@@ -586,7 +603,8 @@ void CustomController::computeSlow()
             
             action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0);
 
-            if (value_ < 30.0)
+            // if (value_ < 30.0)
+            if (value_ < 0.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -596,6 +614,7 @@ void CustomController::computeSlow()
                     std::cout << "Stop by Value Function" << std::endl;
                     std::cout << "value_ : " << value_ << std::endl;
                 }
+                std::cout << "value_ is smaller than 30.0. " << std::endl;
                 std::cout << "value_ : " << value_ << std::endl;
 
             }
@@ -654,7 +673,7 @@ void CustomController::computeSlow()
             rd_.torque_desired = kp_ * (q_stop_ - q_noise_) - kv_*q_vel_noise_;
         }
 
-
+        walking_tick_hk_++;
     }
 }
 

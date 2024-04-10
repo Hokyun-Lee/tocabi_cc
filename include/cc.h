@@ -41,8 +41,8 @@ public:
 
     static const int num_action = 13;
     static const int num_actuator_action = 12;
-    static const int num_cur_state = 51;
-    static const int num_cur_internal_state = 38;
+    static const int num_cur_state = 50;
+    static const int num_cur_internal_state = 37;
     static const int num_state_skip = 2;
     static const int num_state_hist = 5;
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
@@ -121,6 +121,9 @@ public:
     double target_vel_x_ = 0.0;
     double target_vel_y_ = 0.0;
     double target_ang_vel_yaw_ = 0.0;
+
+    int walking_tick_hk_ = 0;
+    double target_vel_x_2_ = 0.0;
 
 private:
     Eigen::VectorQd ControlVal_;
