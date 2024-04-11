@@ -5,6 +5,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Float32MultiArray.h>
 
 class CustomController
 {
@@ -124,12 +125,18 @@ public:
 
     int walking_tick_hk_ = 0;
     double target_vel_x_2_ = 0.0;
+    double hz_ = 2000.0;
 
     // for MAF
     std::vector<double> window;
     int maxSize = 30;
     double sum = 0;
     double maf_calculate(double input);
+
+    ros::Publisher mujoco_ext_force_apply_pub;
+    std_msgs::Float32MultiArray mujoco_applied_ext_force_;
+    double force_temp_ = 100;
+    double theta_temp_ = 0;
 
 private:
     Eigen::VectorQd ControlVal_;

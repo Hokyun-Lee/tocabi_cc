@@ -22,6 +22,8 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     loadNetwork();
 
     joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &CustomController::joyCallback, this);
+    mujoco_ext_force_apply_pub = nh_.advertise<std_msgs::Float32MultiArray>("/tocabi_avatar/applied_ext_force", 10);
+    mujoco_applied_ext_force_.data.resize(7);
 }
 
 Eigen::VectorQd CustomController::getControl()
@@ -673,6 +675,35 @@ void CustomController::computeSlow()
             rd_.torque_desired = kp_ * (q_stop_ - q_noise_) - kv_*q_vel_noise_;
         }
 
+        // if(current_step_num_ == 4 && (walking_tick_mj >= t_start_ + 0.15*hz_ + 0.6*0.3*hz_)  && (walking_tick_mj < t_start_ + 0.15*hz_ + 0.6*0.3*hz_ + 0.2*hz_))
+        if(walking_tick_hk_ >= 2.0*hz_ && walking_tick_hk_ < 2.0*hz_ + 0.2*hz_)
+        {   
+            mujoco_applied_ext_force_.data[0] = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+            mujoco_applied_ext_force_.data[1] = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+            mujoco_applied_ext_force_.data[2] = 0.0; //z-axis linear force
+            mujoco_applied_ext_force_.data[3] = 0.0; //x-axis angular moment
+            mujoco_applied_ext_force_.data[4] = 0.0; //y-axis angular moment
+            mujoco_applied_ext_force_.data[5] = 0.0; //z-axis angular moment
+
+            mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+
+            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);  
+                
+        } 
+        else
+        {
+            mujoco_applied_ext_force_.data[0] = 0; //x-axis linear force
+            mujoco_applied_ext_force_.data[1] = 0; //y-axis linear force
+            mujoco_applied_ext_force_.data[2] = 0; //z-axis linear force
+            mujoco_applied_ext_force_.data[3] = 0; //x-axis angular moment
+            mujoco_applied_ext_force_.data[4] = 0; //y-axis angular moment
+            mujoco_applied_ext_force_.data[5] = 0; //z-axis angular moment
+
+            mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+
+            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        }
+
         walking_tick_hk_++;
     }
 }
@@ -699,9 +730,9 @@ void CustomController::copyRobotData(RobotData &rd_l)
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
     target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.5, 0.8);
-    std::cout << "target_vel_x_ joystick input: " << target_vel_x_ << std::endl;
+    // std::cout << "target_vel_x_ joystick input: " << target_vel_x_ << std::endl;
     target_vel_x_ = maf_calculate(target_vel_x_);
-    std::cout << "target_vel_x_ MAF output: " << target_vel_x_ << std::endl;
+    // std::cout << "target_vel_x_ MAF output: " << target_vel_x_ << std::endl;
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
     target_ang_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.3, 0.3);
 }
@@ -715,11 +746,11 @@ double CustomController::maf_calculate(double input){
     window.push_back(input);
     sum += input;
 
-    //print window elements
-    for(int i = 0; i < window.size(); i++){
-        std::cout << window[i] << " ";
-    }
-    std::endl(std::cout);
+    // //print window elements
+    // for(int i = 0; i < window.size(); i++){
+    //     std::cout << window[i] << " ";
+    // }
+    // std::endl(std::cout);
 
 
     return sum / window.size();
