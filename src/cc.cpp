@@ -699,6 +699,28 @@ void CustomController::copyRobotData(RobotData &rd_l)
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
     target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.5, 0.8);
+    std::cout << "target_vel_x_ joystick input: " << target_vel_x_ << std::endl;
+    target_vel_x_ = maf_calculate(target_vel_x_);
+    std::cout << "target_vel_x_ MAF output: " << target_vel_x_ << std::endl;
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
     target_ang_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.3, 0.3);
+}
+
+double CustomController::maf_calculate(double input){
+    if(window.size() == maxSize){
+        sum -= window[0];
+        window.erase(window.begin());
+    }
+
+    window.push_back(input);
+    sum += input;
+
+    //print window elements
+    for(int i = 0; i < window.size(); i++){
+        std::cout << window[i] << " ";
+    }
+    std::endl(std::cout);
+
+
+    return sum / window.size();
 }

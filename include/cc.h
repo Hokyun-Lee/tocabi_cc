@@ -125,6 +125,12 @@ public:
     int walking_tick_hk_ = 0;
     double target_vel_x_2_ = 0.0;
 
+    // for MAF
+    std::vector<double> window;
+    int maxSize = 30;
+    double sum = 0;
+    double maf_calculate(double input);
+
 private:
     Eigen::VectorQd ControlVal_;
 };
