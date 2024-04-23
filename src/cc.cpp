@@ -582,6 +582,7 @@ void CustomController::computeSlow()
             // ft_right_init_ = abs(rd_cc_.RF_FT(2));
 
             walking_tick_hk_ = 0;
+            ext_force_tick_ = 0;
 
             rd_.tc_init = false;
             std::cout<<"cc mode 7"<<std::endl;
@@ -676,34 +677,100 @@ void CustomController::computeSlow()
         }
 
         // if(current_step_num_ == 4 && (walking_tick_mj >= t_start_ + 0.15*hz_ + 0.6*0.3*hz_)  && (walking_tick_mj < t_start_ + 0.15*hz_ + 0.6*0.3*hz_ + 0.2*hz_))
-        if(walking_tick_hk_ >= 2.0*hz_ && walking_tick_hk_ < 2.0*hz_ + 0.2*hz_)
-        {   
-            mujoco_applied_ext_force_.data[0] = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
-            mujoco_applied_ext_force_.data[1] = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
-            mujoco_applied_ext_force_.data[2] = 0.0; //z-axis linear force
-            mujoco_applied_ext_force_.data[3] = 0.0; //x-axis angular moment
-            mujoco_applied_ext_force_.data[4] = 0.0; //y-axis angular moment
-            mujoco_applied_ext_force_.data[5] = 0.0; //z-axis angular moment
+        // if(walking_tick_hk_ >= 2.0*hz_ && walking_tick_hk_ < 2.0*hz_ + 0.2*hz_)
+        // if(walking_tick_hk_ >= 2.0*hz_ && walking_tick_hk_ < 2.0*hz_ + 0.2*hz_)
+        // {   
+        //     mujoco_applied_ext_force_.data[0] = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+        //     mujoco_applied_ext_force_.data[1] = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+        //     mujoco_applied_ext_force_.data[2] = 0.0; //z-axis linear force
+        //     mujoco_applied_ext_force_.data[3] = 0.0; //x-axis angular moment
+        //     mujoco_applied_ext_force_.data[4] = 0.0; //y-axis angular moment
+        //     mujoco_applied_ext_force_.data[5] = 0.0; //z-axis angular moment
 
-            mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+        //     mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
 
-            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);  
+        //     mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);  
                 
-        } 
+        // }
+        // else
+        // {
+        //     mujoco_applied_ext_force_.data[0] = 0; //x-axis linear force
+        //     mujoco_applied_ext_force_.data[1] = 0; //y-axis linear force
+        //     mujoco_applied_ext_force_.data[2] = 0; //z-axis linear force
+        //     mujoco_applied_ext_force_.data[3] = 0; //x-axis angular moment
+        //     mujoco_applied_ext_force_.data[4] = 0; //y-axis angular moment
+        //     mujoco_applied_ext_force_.data[5] = 0; //z-axis angular moment
+
+        //     mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+
+        //     mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        // }
+        if(ext_force_flag_A_ || ext_force_flag_B_ || ext_force_flag_X_ || ext_force_flag_Y_)
+        {
+            ext_force_apply_time_ = 0.2*hz_; //[s]
+            force_temp_ = 200.0; //[N]
+
+            if(ext_force_flag_X_)
+            {
+                theta_temp_ = 90.0;
+                ext_force_flag_X_ = true;
+            }
+            else if(ext_force_flag_Y_)
+            {
+                force_temp_ = 150.0; //[N]
+                theta_temp_ = 0.0;
+                ext_force_flag_Y_ = true;
+            }
+            else if(ext_force_flag_A_)
+            {
+                force_temp_ = 150.0; //[N]
+                theta_temp_ = 180.0;
+                ext_force_flag_A_ = true;
+            }
+            else if(ext_force_flag_B_)
+            {
+                theta_temp_ = 270.0;
+                ext_force_flag_B_ = true;
+            }
+
+            if(ext_force_tick_ < ext_force_apply_time_){
+                mujoco_applied_ext_force_.data[0] = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+                mujoco_applied_ext_force_.data[1] = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+                mujoco_applied_ext_force_.data[2] = 0.0; //z-axis linear force
+                mujoco_applied_ext_force_.data[3] = 0.0; //x-axis angular moment
+                mujoco_applied_ext_force_.data[4] = 0.0; //y-axis angular moment
+                mujoco_applied_ext_force_.data[5] = 0.0; //z-axis angular moment
+
+                mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+
+                mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+                // std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
+                ext_force_tick_++;
+            }
+            else{
+                ext_force_tick_ = 0;
+                ext_force_flag_X_ = false;
+                ext_force_flag_Y_ = false;
+                ext_force_flag_A_ = false;
+                ext_force_flag_B_ = false; 
+            }
+        }
         else
         {
-            mujoco_applied_ext_force_.data[0] = 0; //x-axis linear force
-            mujoco_applied_ext_force_.data[1] = 0; //y-axis linear force
-            mujoco_applied_ext_force_.data[2] = 0; //z-axis linear force
-            mujoco_applied_ext_force_.data[3] = 0; //x-axis angular moment
-            mujoco_applied_ext_force_.data[4] = 0; //y-axis angular moment
-            mujoco_applied_ext_force_.data[5] = 0; //z-axis angular moment
+            if(ext_force_tick_ == 0){
+                mujoco_applied_ext_force_.data[0] = 0; //x-axis linear force
+                mujoco_applied_ext_force_.data[1] = 0; //y-axis linear force
+                mujoco_applied_ext_force_.data[2] = 0; //z-axis linear force
+                mujoco_applied_ext_force_.data[3] = 0; //x-axis angular moment
+                mujoco_applied_ext_force_.data[4] = 0; //y-axis angular moment
+                mujoco_applied_ext_force_.data[5] = 0; //z-axis angular moment
 
-            mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
+                mujoco_applied_ext_force_.data[6] = 1; //link idx; 1:pelvis
 
-            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+                mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+            }
         }
-
+        
         walking_tick_hk_++;
     }
 }
@@ -735,6 +802,21 @@ void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     // std::cout << "target_vel_x_ MAF output: " << target_vel_x_ << std::endl;
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
     target_ang_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.3, 0.3);
+
+    if(joy->buttons[0] == 1){
+        ext_force_flag_A_ = true;
+    }
+    else if(joy->buttons[1] == 1){
+        ext_force_flag_B_ = true;
+    }
+    else if(joy->buttons[2] == 1){
+        ext_force_flag_X_ = true;
+    }
+    else if(joy->buttons[3] == 1){
+        ext_force_flag_Y_ = true;
+    }
+    // joy->buttons[2] // X button
+    // joy->buttons[3] // Y button
 }
 
 double CustomController::maf_calculate(double input){

@@ -135,8 +135,14 @@ public:
 
     ros::Publisher mujoco_ext_force_apply_pub;
     std_msgs::Float32MultiArray mujoco_applied_ext_force_;
-    double force_temp_ = 100;
+    double force_temp_ = 0;
     double theta_temp_ = 0;
+    bool ext_force_flag_X_ = false;
+    bool ext_force_flag_Y_ = false;
+    bool ext_force_flag_A_ = false;
+    bool ext_force_flag_B_ = false;
+    double ext_force_apply_time_ = 0.2*hz_;
+    int ext_force_tick_ = 0;
 
 private:
     Eigen::VectorQd ControlVal_;
