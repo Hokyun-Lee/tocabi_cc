@@ -2,6 +2,8 @@
 
 using namespace TOCABI;
 
+ofstream HK_data;
+
 CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
 {
     ControlVal_.setZero();
@@ -14,9 +16,12 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
         }
         else
         {
-            writeFile.open("/home/dyros20/rl_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            // writeFile.open("/home/dyros20/rl_ws/src/tocabi_cc/result/data_hk.csv", std::ofstream::out | std::ofstream::app);
+            HK_data.open("/home/dyros20/rl_ws/src/tocabi_cc/result/HK_data.txt");
+
+
         }
-        writeFile << std::fixed << std::setprecision(8);
+        // writeFile << std::fixed << std::setprecision(8);
     }
     initVariable();
     loadNetwork();
@@ -458,7 +463,29 @@ void CustomController::processObservation()
     state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
 
-    state_cur_(data_idx) = 0.2;//target_vel_x_;
+    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 20000)
+    {
+        target_vel_x_ = 0.0;
+    }
+    else if(walking_tick_hk_ >= 20000 && walking_tick_hk_ < 40000)
+    {
+        target_vel_x_ = 0.15 * (walking_tick_hk_ - 20000) / 20000;
+    }
+    else if(walking_tick_hk_ >= 40000 && walking_tick_hk_ < 60000)
+    {
+        target_vel_x_ = 0.15;
+    }
+    else if(walking_tick_hk_ >= 60000 && walking_tick_hk_ < 80000)
+    {
+        target_vel_x_ = 0.15 * (80000 - walking_tick_hk_) / 20000;
+    }
+    else
+    {
+        target_vel_x_ = 0;
+    }
+
+    // state_cur_(data_idx) = 0.2;//target_vel_x_;
+    state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
     data_idx++;
 
     state_cur_(data_idx) = 0.0;//target_vel_y_;
@@ -568,6 +595,8 @@ void CustomController::computeSlow()
             {
                 state_buffer_.block(num_cur_state*i, 0, num_cur_state, 1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
             }
+
+            walking_tick_hk_ = 0;
         }
 
         processNoise();
@@ -593,24 +622,51 @@ void CustomController::computeSlow()
 
             if (is_write_file_)
             {
-                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
-                    writeFile << phase_ << "\t";
-                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0) << "\t";
+                // HK_data << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
+                HK_data << time_cur_ - start_time_/1e6 << "\t";
+                // writeFile << rd_cc_.RF_FT(2) << "\t";
+                HK_data << rd_cc_.RF_FT(2) << "\t";
+                // writeFile << rd_cc_.LF_FT(2) << "\t";
+                HK_data << rd_cc_.LF_FT(2) << "\t";
+                // writeFile << target_vel_x_ << "\t";
+                HK_data << target_vel_x_ << "\t";
+                // writeFile << rd_cc_.link_[Pelvis].v(0)<< "\t";
+                HK_data << rd_cc_.link_[Pelvis].v(0) << "\t";
+                // writeFile << value_ << "\t";
+                HK_data << value_ << "\t" << std::endl;
 
-                    writeFile << rd_cc_.LF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
+                    // writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
+                    // writeFile << phase_ << "\t";
+                    // writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0) << "\t";
 
-                    writeFile << rd_cc_.torque_desired.transpose()  << "\t";
-                    writeFile << q_noise_.transpose() << "\t";
-                    writeFile << q_dot_lpf_.transpose() << "\t";
-                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
-                    writeFile << rd_cc_.q_virtual_.transpose() << "\t";
+                    // writeFile << rd_cc_.LF_FT.transpose() << "\t";
+                    // writeFile << rd_cc_.LF_FT(2) << "\t";
+                    // std::cout << "rd_cc_.LF_FT(2) :" << rd_cc_.LF_FT(2) << std::endl;
+                    // writeFile << rd_cc_.LF_FT(3) << "\t";
+                    // writeFile << rd_cc_.LF_FT(4) << "\t";
+                    // writeFile << rd_cc_.RF_FT.transpose() << "\t";
+                    // writeFile << rd_cc_.RF_FT(2) << "\t";
+                    // std::cout << "rd_cc_.RF_FT(2) :" << rd_cc_.RF_FT(2) << std::endl;
+                    // writeFile << rd_cc_.RF_FT(3) << "\t";
+                    // writeFile << rd_cc_.RF_FT(4) << "\t";
+                    // writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
+                    // writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
+                    // writeFile << target_vel_x_ << "\t";
+                    // std::cout << "target_vel_x_ :" << target_vel_x_ << std::endl;
 
-                    writeFile << value_ << "\t" << stop_by_value_thres_;
+                    // writeFile << rd_cc_.torque_desired.transpose()  << "\t";
+                    // writeFile << q_noise_.transpose() << "\t";
+                    // writeFile << q_dot_lpf_.transpose() << "\t";
+                    // std::cout << "q_dot_lpf_ :" << q_dot_lpf_.transpose() << std::endl;
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
+                    // writeFile << rd_cc_.link_[Pelvis].v(0)<< "\t";
+                    // std::cout << "rd_cc_.link_[Pelvis].v :" << rd_cc_.link_[Pelvis].v << std::endl;
+                    // writeFile << rd_cc_.q_virtual_.transpose() << "\t";
+
+                    // writeFile << value_ << "\t";
+                    // writeFile << value_ << "\t" << stop_by_value_thres_;
                 
-                    writeFile << std::endl;
+                    // writeFile << std::endl;
 
                     time_write_pre_ = rd_cc_.control_time_us_;
             }
@@ -645,7 +701,7 @@ void CustomController::computeSlow()
             rd_.torque_desired = kp_ * (q_stop_ - q_noise_) - kv_*q_vel_noise_;
         }
 
-
+        walking_tick_hk_++;
     }
 }
 

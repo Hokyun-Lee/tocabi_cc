@@ -112,6 +112,8 @@ public:
     double target_vel_x_ = 0.0;
     double target_vel_y_ = 0.0;
 
+    int walking_tick_hk_ = 0;
+
 private:
     Eigen::VectorQd ControlVal_;
 };
