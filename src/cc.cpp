@@ -1,6 +1,7 @@
 #include "cc.h"
 
 using namespace TOCABI;
+ofstream HK_data;
 
 CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
 {
@@ -14,7 +15,8 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
         }
         else
         {
-            writeFile.open("/home/dyros20/rl_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            // writeFile.open("/home/dyros20/rl_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            HK_data.open("/home/dyros20/rl_ws/src/tocabi_cc/result/HK_data.txt");
         }
         writeFile << std::fixed << std::setprecision(8);
     }
@@ -473,6 +475,27 @@ void CustomController::processObservation()
     //     target_vel_x_2_ = 0;
     // }
 
+    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 20000)
+    {
+        target_vel_x_ = 0.0;
+    }
+    else if(walking_tick_hk_ >= 20000 && walking_tick_hk_ < 40000)
+    {
+        target_vel_x_ = 0.8 * (walking_tick_hk_ - 20000) / 20000;
+    }
+    else if(walking_tick_hk_ >= 40000 && walking_tick_hk_ < 60000)
+    {
+        target_vel_x_ = 0.8;
+    }
+    else if(walking_tick_hk_ >= 60000 && walking_tick_hk_ < 80000)
+    {
+        target_vel_x_ = 0.8 * (80000 - walking_tick_hk_) / 20000;
+    }
+    else
+    {
+        target_vel_x_ = 0;
+    }
+
     // state_cur_(data_idx) = 0.2;//target_vel_x_;
     state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
     // state_cur_(data_idx) = target_vel_x_2_;//target_vel_x_;
@@ -624,26 +647,39 @@ void CustomController::computeSlow()
 
             if (is_write_file_)
             {
-                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
-                    writeFile << phase_ << "\t";
-                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0) << "\t";
+                // HK_data << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
+                HK_data << time_cur_ - start_time_/1e6 << "\t";
+                // writeFile << rd_cc_.RF_FT(2) << "\t";
+                HK_data << rd_cc_.RF_FT(2) << "\t";
+                // writeFile << rd_cc_.LF_FT(2) << "\t";
+                HK_data << rd_cc_.LF_FT(2) << "\t";
+                // writeFile << target_vel_x_ << "\t";
+                HK_data << target_vel_x_ << "\t";
+                // writeFile << rd_cc_.link_[Pelvis].v(0)<< "\t";
+                HK_data << rd_cc_.link_[Pelvis].v(0) << "\t";
+                // writeFile << value_ << "\t";
+                HK_data << value_ << "\t" << std::endl;
 
-                    writeFile << rd_cc_.LF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
+                // writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
+                // writeFile << phase_ << "\t";
+                // writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0) << "\t";
 
-                    writeFile << rd_cc_.torque_desired.transpose()  << "\t";
-                    writeFile << q_noise_.transpose() << "\t";
-                    writeFile << q_dot_lpf_.transpose() << "\t";
-                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
-                    writeFile << rd_cc_.q_virtual_.transpose() << "\t";
+                // writeFile << rd_cc_.LF_FT.transpose() << "\t";
+                // writeFile << rd_cc_.RF_FT.transpose() << "\t";
+                // writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
+                // writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
 
-                    writeFile << value_ << "\t" << stop_by_value_thres_;
-                
-                    writeFile << std::endl;
+                // writeFile << rd_cc_.torque_desired.transpose()  << "\t";
+                // writeFile << q_noise_.transpose() << "\t";
+                // writeFile << q_dot_lpf_.transpose() << "\t";
+                // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
+                // writeFile << rd_cc_.q_virtual_.transpose() << "\t";
 
-                    time_write_pre_ = rd_cc_.control_time_us_;
+                // writeFile << value_ << "\t" << stop_by_value_thres_;
+            
+                // writeFile << std::endl;
+
+                time_write_pre_ = rd_cc_.control_time_us_;
             }
             
             time_inference_pre_ = rd_cc_.control_time_us_;
