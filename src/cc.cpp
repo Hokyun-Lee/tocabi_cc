@@ -2,6 +2,8 @@
 
 using namespace TOCABI;
 
+// init CP_OSF branch 
+
 CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
 {
     ControlVal_.setZero();
