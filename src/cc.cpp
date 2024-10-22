@@ -460,10 +460,12 @@ void CustomController::processObservation()
     state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
 
-    state_cur_(data_idx) = 0.4;//target_vel_x_;
+    // state_cur_(data_idx) = 0.1;//target_vel_x_;
+    state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
     data_idx++;
 
-    state_cur_(data_idx) = 0.0;//target_vel_y_;
+    // state_cur_(data_idx) = 0.0;//target_vel_y_;
+    state_cur_(data_idx) = target_vel_y_;//target_vel_y_;
     data_idx++;
 
     for (int i=0; i<6; i++)
@@ -587,16 +589,17 @@ void CustomController::computeSlow()
             
             action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
 
-            // if (value_ < 50.0)
-            // {
-            //     if (stop_by_value_thres_ == false)
-            //     {
-            //         stop_by_value_thres_ = true;
-            //         stop_start_time_ = rd_cc_.control_time_us_;
-            //         q_stop_ = q_noise_;
-            //         std::cout << "Stop by Value Function" << std::endl;
-            //     }
-            // }
+            if (value_ < 30.0)
+            {
+                if (stop_by_value_thres_ == false)
+                {
+                    stop_by_value_thres_ = true;
+                    stop_start_time_ = rd_cc_.control_time_us_;
+                    q_stop_ = q_noise_;
+                    std::cout << "Stop by Value Function" << std::endl;
+                    std::cout << "Value : " << value_ << std::endl;
+                }
+            }
 
             if (is_write_file_)
             {
@@ -677,6 +680,7 @@ void CustomController::copyRobotData(RobotData &rd_l)
 
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
+    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.3, 0.5);
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
+    std::cout << "target_vel_x_ : " << target_vel_x_ << " target_vel_y_ : " << target_vel_y_ << std::endl;
 }
