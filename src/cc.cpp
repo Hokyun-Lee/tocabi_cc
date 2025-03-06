@@ -14,7 +14,7 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
         }
         else
         {
-            writeFile.open("/home/kim/tocabi_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/dyros24/cadence/ros_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
         }
         writeFile << std::fixed << std::setprecision(8);
     }
@@ -35,13 +35,13 @@ void CustomController::loadNetwork()
     rl_action_.setZero();
 
 
-    string cur_path = "/home/kim/tocabi_ws/src/tocabi_cc/";
+    string cur_path = "/home/dyros24/cadence/ros_ws/src/tocabi_cc/";
 
     if (is_on_robot_)
     {
         cur_path = "/home/dyros/catkin_ws/src/tocabi_cc/";
     }
-    std::ifstream file[14];
+    std::ifstream file[15];
     file[0].open(cur_path+"weight/a2c_network_actor_mlp_0_weight.txt", std::ios::in);
     file[1].open(cur_path+"weight/a2c_network_actor_mlp_0_bias.txt", std::ios::in);
     file[2].open(cur_path+"weight/a2c_network_actor_mlp_2_weight.txt", std::ios::in);
@@ -56,6 +56,16 @@ void CustomController::loadNetwork()
     file[11].open(cur_path+"weight/a2c_network_critic_mlp_2_bias.txt", std::ios::in);
     file[12].open(cur_path+"weight/a2c_network_value_weight.txt", std::ios::in);
     file[13].open(cur_path+"weight/a2c_network_value_bias.txt", std::ios::in);
+    file[14].open(cur_path+"weight/commands.txt", std::ios::in);
+
+    if (file[14].is_open()) {
+        file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd;
+        std::cout << "target_vel_x_cmd : " << target_vel_x_cmd << std::endl;
+        std::cout << "target_vel_y_cmd : " << target_vel_y_cmd << std::endl;
+        std::cout << "target_vel_yaw_cmd : " << target_vel_yaw_cmd << std::endl;
+    } else {
+        std::cout << "failed to open commands.txt" << std::endl;
+    }
 
 
     if(!file[0].is_open())
@@ -460,10 +470,12 @@ void CustomController::processObservation()
     state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
     
-    state_cur_(data_idx) = 0.4;//target_vel_x_;
+    // state_cur_(data_idx) = 0.27;//target_vel_x_;
+    state_cur_(data_idx) = target_vel_x_cmd;
     data_idx++;
 
-    state_cur_(data_idx) = 0.0;//target_vel_y_;
+    // state_cur_(data_idx) = 0.0;//target_vel_y_;
+    state_cur_(data_idx) = target_vel_y_cmd;
     data_idx++;
 
     for (int i=0; i<6; i++)
@@ -587,7 +599,7 @@ void CustomController::computeSlow()
             
             action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
 
-            if (value_ < 50.0)
+            if (value_ < 40.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -596,26 +608,31 @@ void CustomController::computeSlow()
                     q_stop_ = q_noise_;
                     std::cout << "Stop by Value Function" << std::endl;
                 }
+                // std::cout << "Stop by Value Function" << std::endl;
+                std::cout << "Value :" << value_ << std::endl;
             }
 
             if (is_write_file_)
             {
-                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
-                    writeFile << phase_ << "\t";
-                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/100.0, 0.0, 1/100.0) << "\t";
+                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t"; // 1
+                    writeFile << phase_ << "\t"; // 2
+                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/100.0, 0.0, 1/100.0) << "\t"; //phase modulation //3
 
-                    writeFile << rd_cc_.LF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
+                    writeFile << rd_cc_.LF_FT.transpose() << "\t";    //4~9   
+                    writeFile << rd_cc_.RF_FT.transpose() << "\t";    //10~15 
+                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t"; //16~21
+                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t"; //22~27 
 
-                    writeFile << rd_cc_.torque_desired.transpose()  << "\t";
-                    writeFile << q_noise_.transpose() << "\t";
-                    writeFile << q_dot_lpf_.transpose() << "\t";
-                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
-                    writeFile << rd_cc_.q_virtual_.transpose() << "\t";
+                    writeFile << rd_cc_.torque_desired.transpose()  << "\t"; // 28~60
+                    writeFile << q_noise_.transpose() << "\t"; // 61~93
+                    writeFile << q_dot_lpf_.transpose() << "\t"; // 94~126
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t"; //127~165 ?  //127: x_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(0) << "\t"; //127  x_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(1) << "\t"; //128  y_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(2) << "\t"; //129  z_vel
+                    // writeFile << rd_cc_.q_virtual_.transpose() << "\t"; //173~205
 
-                    writeFile << value_ << "\t" << stop_by_value_thres_;
+                    writeFile << value_ << "\t" << stop_by_value_thres_; //130~131
                 
                     writeFile << std::endl;
 
@@ -644,7 +661,19 @@ void CustomController::computeSlow()
         }
         else
         {
-             rd_.torque_desired = torque_rl_;
+            rd_.torque_desired = torque_rl_;
+            // rd_.torque_desired(0) = 0.0;
+            // rd_.torque_desired(1) = 0.0;
+            // rd_.torque_desired(2) = 0.0;
+            // rd_.torque_desired(3) = 0.0;
+            // rd_.torque_desired(4) = 0.0;
+            // rd_.torque_desired(5) = 0.0;
+            // for (int _joint : {3}) {
+            //     rd_.torque_desired(_joint) = kp_(_joint,_joint) * (q_init_(_joint) - q_noise_(_joint)) - kv_(_joint,_joint)*q_vel_noise_(_joint);
+            // }
+            // for (int _joint : {3}) {
+            //     rd_.torque_desired(_joint) = 10000 * (q_init_(_joint) - q_noise_(_joint)) - 50*q_vel_noise_(_joint);
+            // }
         }
 
         if (stop_by_value_thres_)
