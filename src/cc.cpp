@@ -22,6 +22,9 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     loadNetwork();
 
     joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &CustomController::joyCallback, this);
+    // mujoco_ext_force_apply_pub = nh_.advertise<std_msgs::Float32MultiArray>("/tocabi_avatar/applied_ext_force", 10);
+    mujoco_ext_force_apply_pub = nh_.advertise<mujoco_ros_msgs::applyforce>("/mujoco_ros_interface/applied_ext_force", 10);
+    // mujoco_applied_ext_force_.data.resize(7);
 }
 
 Eigen::VectorQd CustomController::getControl()
@@ -50,6 +53,8 @@ void CustomController::loadNetwork()
     file[5].open(cur_path+"weight/a2c_network_mu_bias.txt", std::ios::in);
     file[6].open(cur_path+"weight/obs_mean_fixed.txt", std::ios::in);
     file[7].open(cur_path+"weight/obs_variance_fixed.txt", std::ios::in);
+    // file[6].open(cur_path+"weight/obs_mean_fixed_cadence.txt", std::ios::in);
+    // file[7].open(cur_path+"weight/obs_variance_fixed_cadence.txt", std::ios::in);
     file[8].open(cur_path+"weight/a2c_network_critic_mlp_0_weight.txt", std::ios::in);
     file[9].open(cur_path+"weight/a2c_network_critic_mlp_0_bias.txt", std::ios::in);
     file[10].open(cur_path+"weight/a2c_network_critic_mlp_2_weight.txt", std::ios::in);
@@ -59,10 +64,11 @@ void CustomController::loadNetwork()
     file[14].open(cur_path+"weight/commands.txt", std::ios::in);
 
     if (file[14].is_open()) {
-        file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd;
+        file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd >> target_cadence_cmd;
         std::cout << "target_vel_x_cmd : " << target_vel_x_cmd << std::endl;
         std::cout << "target_vel_y_cmd : " << target_vel_y_cmd << std::endl;
         std::cout << "target_vel_yaw_cmd : " << target_vel_yaw_cmd << std::endl;
+        std::cout << "target_cadence_cmd : " << target_cadence_cmd << std::endl;
     } else {
         std::cout << "failed to open commands.txt" << std::endl;
     }
@@ -469,9 +475,34 @@ void CustomController::processObservation()
     data_idx++;
     state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
+
+    float init_vel = 0.0;
+    float max_vel = 0.4;
+
+    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 20000)
+    {
+        target_vel_x_ = init_vel;
+    }
+    else if(walking_tick_hk_ >= 20000 && walking_tick_hk_ < 40000)
+    {
+        target_vel_x_ = max_vel * (walking_tick_hk_ - 20000) / 20000;
+    }
+    else if(walking_tick_hk_ >= 40000 && walking_tick_hk_ < 60000)
+    {
+        target_vel_x_ = max_vel;
+    }
+    else if(walking_tick_hk_ >= 60000 && walking_tick_hk_ < 80000)
+    {
+        target_vel_x_ = max_vel * (80000 - walking_tick_hk_) / 20000;
+    }
+    else
+    {
+        target_vel_x_ = init_vel;
+    }
     
-    // state_cur_(data_idx) = 0.27;//target_vel_x_;
-    state_cur_(data_idx) = target_vel_x_cmd;
+    state_cur_(data_idx) = 0.0;//target_vel_x_;
+    // state_cur_(data_idx) = target_vel_x_;
+    // state_cur_(data_idx) = target_vel_x_cmd;
     data_idx++;
 
     // state_cur_(data_idx) = 0.0;//target_vel_y_;
@@ -484,6 +515,11 @@ void CustomController::processObservation()
         data_idx++;
     }
 
+
+    // state_cur_(data_idx) = 60.0;
+    // state_cur_(data_idx) = target_cadence_cmd;
+    // state_cur_(data_idx) = 10.0;
+    // data_idx++;
     // state_cur_(data_idx) = -rd_cc_.LF_FT(2);
     // data_idx++;
 
@@ -580,6 +616,9 @@ void CustomController::computeSlow()
             std::cout<<"cc mode 7"<<std::endl;
             torque_init_ = rd_cc_.torque_desired;
 
+            walking_tick_hk_ = 0;
+            ext_force_tick_ = 0;
+
             processNoise();
             processObservation();
             for (int i = 0; i < num_state_skip*num_state_hist; i++) 
@@ -599,7 +638,7 @@ void CustomController::computeSlow()
             
             action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
 
-            if (value_ < 40.0)
+            if (value_ < 25.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -681,7 +720,69 @@ void CustomController::computeSlow()
             rd_.torque_desired = kp_ * (q_stop_ - q_noise_) - kv_*q_vel_noise_;
         }
 
+        //// Loco Policy
+        // ext_force_apply_time_ = 1.0*hz_; //[s]
+        // force_temp_ = 70.0;
+        // ext_force_apply_time_ = 0.5*hz_; //[s]
+        // force_temp_ = 140.0;
+        // ext_force_apply_time_ = 0.3333*hz_; //[s]
+        // force_temp_ = 210.0;
+        // ext_force_apply_time_ = 0.2*hz_; //[s]
+        // force_temp_ = 350.0;
 
+        // Balance Policy
+        ext_force_apply_time_ = 1.0*hz_; //[s]
+        force_temp_ = 150.0;
+        theta_temp_ = 270.0;
+
+        if(walking_tick_hk_ == 50000){
+            ext_force_flag = true;
+            // ext_force_tick_ = 0;
+        }
+
+        if(ext_force_tick_ < ext_force_apply_time_ && ext_force_flag){
+                mujoco_applied_ext_force_.wrench.force.x = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+                mujoco_applied_ext_force_.wrench.force.y = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+                mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+
+                mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+
+                mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+                ext_force_tick_++;
+        }
+        else{
+            ext_force_tick_ = 0;
+            ext_force_flag = false;
+            // ext_force_flag_X_ = false;
+            // ext_force_flag_Y_ = false;
+            // ext_force_flag_A_ = false;
+            // ext_force_flag_B_ = false; 
+            mujoco_applied_ext_force_.wrench.force.x = 0; //x-axis linear force
+            mujoco_applied_ext_force_.wrench.force.y = 0; //y-axis linear force  
+            mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+
+            mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+
+            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        }
+
+        if(walking_tick_hk_ % 500 == 0)
+        {
+            std::cout << "walking_tick_hk_ : " << walking_tick_hk_ << std::endl;
+            std::cout << "phase : " << phase_ << std::endl;
+            std::cout << "target_vel_x_ : " << target_vel_x_ << std::endl;
+            std::cout << "target_vel_y_ : " << target_vel_y_ << std::endl;
+            std::cout << "ext_force_flag :" << ext_force_flag << std::endl;
+            std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
+        }
+
+        walking_tick_hk_++;
     }
 }
 
