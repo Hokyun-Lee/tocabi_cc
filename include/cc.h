@@ -64,6 +64,30 @@ public:
     Eigen::MatrixXd value_hidden_layer2_;
     double value_;
 
+    // balance policy
+    Eigen::MatrixXd balance_policy_net_w0_;
+    Eigen::MatrixXd balance_policy_net_b0_;
+    Eigen::MatrixXd balance_policy_net_w2_;
+    Eigen::MatrixXd balance_policy_net_b2_;
+    Eigen::MatrixXd balance_action_net_w_;
+    Eigen::MatrixXd balance_action_net_b_;
+    Eigen::MatrixXd balance_hidden_layer1_;
+    Eigen::MatrixXd balance_hidden_layer2_;
+    Eigen::MatrixXd balance_rl_action_;
+
+    Eigen::MatrixXd balance_value_net_w0_;
+    Eigen::MatrixXd balance_value_net_b0_;
+    Eigen::MatrixXd balance_value_net_w2_;
+    Eigen::MatrixXd balance_value_net_b2_;
+    Eigen::MatrixXd balance_value_net_w_;
+    Eigen::MatrixXd balance_value_net_b_;
+    Eigen::MatrixXd balance_value_hidden_layer1_;
+    Eigen::MatrixXd balance_value_hidden_layer2_;
+    double balance_value_;
+
+    Eigen::MatrixXd balance_state_mean_;
+    Eigen::MatrixXd balance_state_var_;
+
     bool stop_by_value_thres_ = false;
     Eigen::Matrix<double, MODEL_DOF, 1> q_stop_;
     float stop_start_time_;
@@ -135,6 +159,7 @@ public:
     int walking_tick_hk_ = 0;
     // double target_vel_x_2_ = 0.0;
     double hz_ = 2000.0;
+    bool loco_policy_on = true;
 
 private:
     Eigen::VectorQd ControlVal_;
