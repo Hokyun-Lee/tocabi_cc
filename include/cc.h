@@ -33,16 +33,23 @@ public:
     void initVariable();
     Eigen::Vector3d mat2euler(Eigen::Matrix3d mat);
 
+    Eigen::VectorXd joint_mask;
+    static const int num_cur_state = 64;
+    static const int num_cur_internal_state = 51;
+
     static const int num_action = 13;
     static const int num_actuator_action = 12;
-    static const int num_cur_state = 50;
+    // static const int num_cur_state = 50;
+    // static const int num_cur_internal_state = 37;
+
     // static const int num_cur_state = 51;
-    static const int num_cur_internal_state = 37;
     // static const int num_cur_internal_state = 38;
     static const int num_state_skip = 2;
     static const int num_state_hist = 10;
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
     static const int num_hidden = 256;
+
+    
 
     Eigen::MatrixXd policy_net_w0_;
     Eigen::MatrixXd policy_net_b0_;
@@ -85,6 +92,9 @@ public:
     Eigen::MatrixXd balance_value_hidden_layer2_;
     double balance_value_;
 
+    Eigen::MatrixXd balance_state_;
+    Eigen::MatrixXd balance_state_cur_;
+    Eigen::MatrixXd balance_state_buffer_;
     Eigen::MatrixXd balance_state_mean_;
     Eigen::MatrixXd balance_state_var_;
 
