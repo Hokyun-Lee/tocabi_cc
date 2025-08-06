@@ -1030,16 +1030,16 @@ void CustomController::computeSlow()
             //     loco_policy_on = true;
             // }
 
-            if (value_ < 10.0)
+            if (value_ < 50.0)
             {
-                // if (stop_by_value_thres_ == false)
-                // {
-                //     stop_by_value_thres_ = true;
-                //     stop_start_time_ = rd_cc_.control_time_us_;
-                //     q_stop_ = q_noise_;
-                //     std::cout << "Stop by Value Function" << std::endl;
-                // }
-                // std::cout << "Stop by Value Function" << std::endl;
+                if (stop_by_value_thres_ == false)
+                {
+                    stop_by_value_thres_ = true;
+                    stop_start_time_ = rd_cc_.control_time_us_;
+                    q_stop_ = q_noise_;
+                    std::cout << "Stop by Value Function" << std::endl;
+                }
+                std::cout << "Stop by Value Function" << std::endl;
                 std::cout << "Value :" << value_ << std::endl;
             }
 
@@ -1214,4 +1214,5 @@ void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
     target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
+    target_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
 }
