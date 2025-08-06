@@ -777,46 +777,47 @@ void CustomController::processObservation()
     data_idx++;
 
     float init_vel = 0.0;
-    float max_vel = 0.4;
+    float max_vel = target_vel_x_cmd;
 
-    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 20000)
+    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 6000)
     {
         target_vel_x_ = init_vel;
     }
-    else if(walking_tick_hk_ >= 20000 && walking_tick_hk_ < 40000)
+    else if(walking_tick_hk_ >= 6000 && walking_tick_hk_ < 12000)
     {
-        target_vel_x_ = max_vel * (walking_tick_hk_ - 20000) / 20000;
+        target_vel_x_ = max_vel * (walking_tick_hk_ - 6000) / 6000;
     }
-    else if(walking_tick_hk_ >= 40000 && walking_tick_hk_ < 60000)
+    else if(walking_tick_hk_ >= 12000 && walking_tick_hk_ < 22000)
     {
         target_vel_x_ = max_vel;
     }
-    else if(walking_tick_hk_ >= 60000 && walking_tick_hk_ < 80000)
+    else if(walking_tick_hk_ >= 22000 && walking_tick_hk_ < 28000)
     {
-        target_vel_x_ = max_vel * (80000 - walking_tick_hk_) / 20000;
+        target_vel_x_ = max_vel * (28000 - walking_tick_hk_) / 6000;
     }
     else
     {
         target_vel_x_ = init_vel;
     }
     
-    if(value_ < 140){
-        target_vel_x_ = 0.0;
-    } 
+    // if(value_ < 140){
+    //     target_vel_x_ = 0.0;
+    // } 
 
 
-    state_cur_(data_idx) = 0.0;//target_vel_x_;
-    // state_cur_(data_idx) = target_vel_x_;
+    // state_cur_(data_idx) = 0.0;//target_vel_x_;
+    state_cur_(data_idx) = target_vel_x_;
     // balance_state_cur_(data_idx) = 0.0;
     // state_cur_(data_idx) = target_vel_x_cmd;
     data_idx++;
 
-    state_cur_(data_idx) = 0.0;//target_vel_y_;
-    // state_cur_(data_idx) = target_vel_y_cmd;
+    // state_cur_(data_idx) = 0.0;//target_vel_y_;
+    state_cur_(data_idx) = target_vel_y_cmd;
     // balance_state_cur_(data_idx) = 0.0;
     data_idx++;
 
-    state_cur_(data_idx) = -0.5; //target_vel_yaw_;
+    // state_cur_(data_idx) = 0.0; //target_vel_yaw_;
+    state_cur_(data_idx) = target_vel_yaw_cmd;
     data_idx++;
 
     for (int i=0; i<6; i++)
@@ -1030,7 +1031,7 @@ void CustomController::computeSlow()
             //     loco_policy_on = true;
             // }
 
-            if (value_ < 50.0)
+            if (value_ < 40.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -1065,7 +1066,9 @@ void CustomController::computeSlow()
 
                     writeFile << value_ << "\t" << stop_by_value_thres_; //130~131
                     // writeFile << value_ << "\t" << stop_by_value_thres_ << "\t" << balance_value_ << "\t"; //130~131
-                    writeFile << (float)loco_policy_on;
+                    // writeFile << (float)loco_policy_on;
+                    writeFile << "\t" << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_; //132~134
+                    writeFile << "\t" << walking_tick_hk_;
                 
                     writeFile << std::endl;
 
