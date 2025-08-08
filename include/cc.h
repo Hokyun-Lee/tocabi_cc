@@ -154,6 +154,9 @@ public:
     double target_vel_yaw_cmd = 0.0;
     double target_cadence_cmd = 0.0;
 
+    Eigen::VectorXd joint_status_;
+    Eigen::VectorXd disable_torque_;
+
     ros::Publisher mujoco_ext_force_apply_pub;
     // std_msgs::Float32MultiArray mujoco_applied_ext_force_;
     mujoco_ros_msgs::applyforce mujoco_applied_ext_force_;

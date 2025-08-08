@@ -83,6 +83,8 @@ void CustomController::loadNetwork()
     file[13].open(cur_path+"weight/loco_policy/a2c_network_value_bias.txt", std::ios::in);
 
     file[14].open(cur_path+"weight/commands.txt", std::ios::in);
+    file[15].open(cur_path+"weight/joint_status.txt", std::ios::in);
+    file[16].open(cur_path+"weight/disable_torque.txt", std::ios::in);
 
     if (file[14].is_open()) {
         file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd >> target_cadence_cmd;
@@ -93,6 +95,29 @@ void CustomController::loadNetwork()
     } else {
         std::cout << "failed to open commands.txt" << std::endl;
     }
+
+    joint_status_.resize(13);
+    joint_status_.setZero();
+    if (file[15].is_open()) {
+        for (int i = 0; i < 13; i++) {
+            file[15] >> joint_status_(i);
+        }
+        std::cout << "joint_status_ : " << joint_status_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open joint_status.txt" << std::endl;
+    }
+
+    disable_torque_.resize(12);
+    disable_torque_.setZero();
+    if (file[16].is_open()) {
+        for (int i = 0; i < 12; i++) {
+            file[16] >> disable_torque_(i);
+        }
+        std::cout << "disable_torque_ : " << disable_torque_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open disable_torque.txt" << std::endl;
+    }
+
 
     // file[15].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_0_weight.txt", std::ios::in);
     // file[16].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_0_bias.txt", std::ios::in);
@@ -650,14 +675,14 @@ void CustomController::initVariable()
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0,
                         100.0, 100.0,
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0;
-    kp_.diagonal() /= 9.0;
+    // kp_.diagonal() /= 9.0;
     kv_.diagonal() << 15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         200.0, 100.0, 100.0,
                         10.0, 28.0, 10.0, 10.0, 10.0, 10.0, 3.0, 3.0,
                         2.0, 2.0,
                         10.0, 28.0, 10.0, 10.0, 10.0, 10.0, 3.0, 3.0;
-    kv_.diagonal() /= 3.0;
+    // kv_.diagonal() /= 3.0;
 }
 
 Eigen::Vector3d CustomController::mat2euler(Eigen::Matrix3d mat)
@@ -776,29 +801,29 @@ void CustomController::processObservation()
     // balance_state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
 
-    float init_vel = 0.0;
-    float max_vel = target_vel_x_cmd;
+    // float init_vel = 0.0;
+    // float max_vel = target_vel_x_cmd;
 
-    if(walking_tick_hk_ > 0 && walking_tick_hk_ < 6000)
-    {
-        target_vel_x_ = init_vel;
-    }
-    else if(walking_tick_hk_ >= 6000 && walking_tick_hk_ < 12000)
-    {
-        target_vel_x_ = max_vel * (walking_tick_hk_ - 6000) / 6000;
-    }
-    else if(walking_tick_hk_ >= 12000 && walking_tick_hk_ < 22000)
-    {
-        target_vel_x_ = max_vel;
-    }
-    else if(walking_tick_hk_ >= 22000 && walking_tick_hk_ < 28000)
-    {
-        target_vel_x_ = max_vel * (28000 - walking_tick_hk_) / 6000;
-    }
-    else
-    {
-        target_vel_x_ = init_vel;
-    }
+    // if(walking_tick_hk_ > 0 && walking_tick_hk_ < 6000)
+    // {
+    //     target_vel_x_ = init_vel;
+    // }
+    // else if(walking_tick_hk_ >= 6000 && walking_tick_hk_ < 12000)
+    // {
+    //     target_vel_x_ = max_vel * (walking_tick_hk_ - 6000) / 6000;
+    // }
+    // else if(walking_tick_hk_ >= 12000 && walking_tick_hk_ < 22000)
+    // {
+    //     target_vel_x_ = max_vel;
+    // }
+    // else if(walking_tick_hk_ >= 22000 && walking_tick_hk_ < 28000)
+    // {
+    //     target_vel_x_ = max_vel * (28000 - walking_tick_hk_) / 6000;
+    // }
+    // else
+    // {
+    //     target_vel_x_ = init_vel;
+    // }
     
     // if(value_ < 140){
     //     target_vel_x_ = 0.0;
@@ -806,17 +831,19 @@ void CustomController::processObservation()
 
 
     // state_cur_(data_idx) = 0.0;//target_vel_x_;
-    state_cur_(data_idx) = target_vel_x_;
+    // state_cur_(data_idx) = target_vel_x_;
     // balance_state_cur_(data_idx) = 0.0;
-    // state_cur_(data_idx) = target_vel_x_cmd;
+    state_cur_(data_idx) = target_vel_x_cmd;
     data_idx++;
 
     // state_cur_(data_idx) = 0.0;//target_vel_y_;
+    // state_cur_(data_idx) = target_vel_y_;
     state_cur_(data_idx) = target_vel_y_cmd;
     // balance_state_cur_(data_idx) = 0.0;
     data_idx++;
 
     // state_cur_(data_idx) = 0.0; //target_vel_yaw_;
+    // state_cur_(data_idx) = target_vel_yaw_;
     state_cur_(data_idx) = target_vel_yaw_cmd;
     data_idx++;
 
@@ -827,15 +854,15 @@ void CustomController::processObservation()
         data_idx++;
     }
 
-    joint_mask.resize(13);
-    joint_mask.setZero();
-    joint_mask << 1.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+    // joint_mask.resize(13);
+    // joint_mask.setZero();
+    // joint_mask << 1.0,
+    //                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    //                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
     for (int i=0; i<13; i++)
     {
-        state_cur_(data_idx) = joint_mask(i);
+        state_cur_(data_idx) = joint_status_(i);
         // std::cout << "joint_mask(" << i << ") : " << joint_mask(i) << std::endl;
         data_idx++;
     }
@@ -1031,7 +1058,7 @@ void CustomController::computeSlow()
             //     loco_policy_on = true;
             // }
 
-            if (value_ < 40.0)
+            if (value_ < 25.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -1091,7 +1118,22 @@ void CustomController::computeSlow()
         {
             torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
         }
-        
+
+        // // mimic sholder joint position to hip pitch joint position
+        // torque_rl_(16) = kp_(16,16) * (-(q_noise_(2)+0.24) - q_noise_(16)) - kv_(16,16)*q_vel_noise_(16);
+        // torque_rl_(26) = kp_(26,26) * ((q_noise_(8)+0.24) - q_noise_(26)) - kv_(26,26)*q_vel_noise_(26);
+        // // std::cout << "q_noise_(2) : " << q_noise_(2) << std::endl;
+        // // std::cout << "q_noise_(16) : " << q_noise_(16) << std::endl;
+        // // std::cout << "q_noise_(8) : " << q_noise_(8) << std::endl;
+        // // std::cout << "q_noise_(26) : " << q_noise_(26) << std::endl;
+        // // std::cout << "q_noise_(2) - q_noise_(16) : " << q_noise_(2) - q_noise_(16) << std::endl;
+        // // std::cout << "q_noise_(8) - q_noise_(26) : " << q_noise_(8) - q_noise_(26) << std::endl;
+        // std::cout << "torque_rl_(16) : " << torque_rl_(16) << std::endl;
+        // std::cout << "torque_rl_(26) : " << torque_rl_(26) << std::endl;
+
+        // torque_rl_(16) = 0;
+        // torque_rl_(26) = 0;
+
         if (rd_cc_.control_time_us_ < start_time_ + 0.1e6)
         {
             for (int i = 0; i <MODEL_DOF; i++)
@@ -1102,7 +1144,17 @@ void CustomController::computeSlow()
         }
         else
         {
+
+            for (int i = 0; i < 12; i++)
+            {
+                if (disable_torque_(i) == 1)
+                {
+                    torque_rl_(i) = 0.0;
+                }
+            }
+
             rd_.torque_desired = torque_rl_;
+            
             // rd_.torque_desired(0) = 0.0;
             // rd_.torque_desired(1) = 0.0;
             // rd_.torque_desired(2) = 0.0;
@@ -1184,6 +1236,7 @@ void CustomController::computeSlow()
             std::cout << "phase : " << phase_ << std::endl;
             std::cout << "target_vel_x_ : " << target_vel_x_ << std::endl;
             std::cout << "target_vel_y_ : " << target_vel_y_ << std::endl;
+            std::cout << "target_vel_yaw_ : " << target_vel_yaw_ << std::endl;
             std::cout << "ext_force_flag :" << ext_force_flag << std::endl;
             std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
             std::cout << "value_ : " << value_ << std::endl;
@@ -1217,5 +1270,5 @@ void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
     target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
-    target_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
+    target_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.5, 0.5);
 }
