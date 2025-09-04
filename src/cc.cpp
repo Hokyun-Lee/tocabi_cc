@@ -1152,6 +1152,8 @@ void CustomController::computeSlow()
                     writeFile << value_ << "\t" << stop_by_value_thres_ << "\t"; //28~29
                     writeFile << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_ << "\t"; //30~32
                     writeFile << v_local.transpose() << "\t" << w_local.transpose() << "\t"; //33~38
+                    writeFile << rd_cc_.torque_desired.head(12).transpose()  << "\t"; // 39~50
+                    writeFile << q_noise_.head(12).transpose() << "\t"; // 51~62
                     writeFile << std::endl;
 
                     time_write_pre_ = rd_cc_.control_time_us_;
