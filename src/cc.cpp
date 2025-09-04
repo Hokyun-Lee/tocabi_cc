@@ -10,11 +10,11 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     {
         if (is_on_robot_)
         {
-            writeFile.open("/home/hokyun20/RL_cc_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/dyros/catkin_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
         }
         else
         {
-            writeFile.open("/home/dyros24/rl_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/dyros24/cadence/ros_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
         }
         writeFile << std::fixed << std::setprecision(8);
     }
@@ -22,6 +22,9 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     loadNetwork();
 
     joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &CustomController::joyCallback, this);
+    // mujoco_ext_force_apply_pub = nh_.advertise<std_msgs::Float32MultiArray>("/tocabi_avatar/applied_ext_force", 10);
+    mujoco_ext_force_apply_pub = nh_.advertise<mujoco_ros_msgs::applyforce>("/mujoco_ros_interface/applied_ext_force", 10);
+    // mujoco_applied_ext_force_.data.resize(7);
 }
 
 Eigen::VectorQd CustomController::getControl()
@@ -33,29 +36,115 @@ void CustomController::loadNetwork()
 {
     state_.setZero();
     rl_action_.setZero();
+    // balance_rl_action_.setZero();
 
 
-    string cur_path = "/home/dyros24/rl_ws/src/tocabi_cc/";
+    string cur_path = "/home/dyros24/cadence/ros_ws/src/tocabi_cc/";
 
     if (is_on_robot_)
     {
         cur_path = "/home/dyros/catkin_ws/src/tocabi_cc/";
     }
-    std::ifstream file[14];
-    file[0].open(cur_path+"weight/mlp_extractor_policy_net_0_weight.txt", std::ios::in);
-    file[1].open(cur_path+"weight/mlp_extractor_policy_net_0_bias.txt", std::ios::in);
-    file[2].open(cur_path+"weight/mlp_extractor_policy_net_2_weight.txt", std::ios::in);
-    file[3].open(cur_path+"weight/mlp_extractor_policy_net_2_bias.txt", std::ios::in);
-    file[4].open(cur_path+"weight/action_net_weight.txt", std::ios::in);
-    file[5].open(cur_path+"weight/action_net_bias.txt", std::ios::in);
-    file[6].open(cur_path+"weight/obs_mean_fixed.txt", std::ios::in);
-    file[7].open(cur_path+"weight/obs_variance_fixed.txt", std::ios::in);
-    file[8].open(cur_path+"weight/mlp_extractor_value_net_0_weight.txt", std::ios::in);
-    file[9].open(cur_path+"weight/mlp_extractor_value_net_0_bias.txt", std::ios::in);
-    file[10].open(cur_path+"weight/mlp_extractor_value_net_2_weight.txt", std::ios::in);
-    file[11].open(cur_path+"weight/mlp_extractor_value_net_2_bias.txt", std::ios::in);
-    file[12].open(cur_path+"weight/value_net_weight.txt", std::ios::in);
-    file[13].open(cur_path+"weight/value_net_bias.txt", std::ios::in);
+    // std::ifstream file[15];
+    // file[0].open(cur_path+"weight/a2c_network_actor_mlp_0_weight.txt", std::ios::in);
+    // file[1].open(cur_path+"weight/a2c_network_actor_mlp_0_bias.txt", std::ios::in);
+    // file[2].open(cur_path+"weight/a2c_network_actor_mlp_2_weight.txt", std::ios::in);
+    // file[3].open(cur_path+"weight/a2c_network_actor_mlp_2_bias.txt", std::ios::in);
+    // file[4].open(cur_path+"weight/a2c_network_mu_weight.txt", std::ios::in);
+    // file[5].open(cur_path+"weight/a2c_network_mu_bias.txt", std::ios::in);
+    // file[6].open(cur_path+"weight/obs_mean_fixed.txt", std::ios::in);
+    // file[7].open(cur_path+"weight/obs_variance_fixed.txt", std::ios::in);
+    // // file[6].open(cur_path+"weight/obs_mean_fixed_cadence.txt", std::ios::in);
+    // // file[7].open(cur_path+"weight/obs_variance_fixed_cadence.txt", std::ios::in);
+    // file[8].open(cur_path+"weight/a2c_network_critic_mlp_0_weight.txt", std::ios::in);
+    // file[9].open(cur_path+"weight/a2c_network_critic_mlp_0_bias.txt", std::ios::in);
+    // file[10].open(cur_path+"weight/a2c_network_critic_mlp_2_weight.txt", std::ios::in);
+    // file[11].open(cur_path+"weight/a2c_network_critic_mlp_2_bias.txt", std::ios::in);
+    // file[12].open(cur_path+"weight/a2c_network_value_weight.txt", std::ios::in);
+    // file[13].open(cur_path+"weight/a2c_network_value_bias.txt", std::ios::in);
+    // file[14].open(cur_path+"weight/commands.txt", std::ios::in);
+
+    std::ifstream file[31];
+    file[0].open(cur_path+"weight/loco_policy/a2c_network_actor_mlp_0_weight.txt", std::ios::in);
+    file[1].open(cur_path+"weight/loco_policy/a2c_network_actor_mlp_0_bias.txt", std::ios::in);
+    file[2].open(cur_path+"weight/loco_policy/a2c_network_actor_mlp_2_weight.txt", std::ios::in);
+    file[3].open(cur_path+"weight/loco_policy/a2c_network_actor_mlp_2_bias.txt", std::ios::in);
+    file[4].open(cur_path+"weight/loco_policy/a2c_network_mu_weight.txt", std::ios::in);
+    file[5].open(cur_path+"weight/loco_policy/a2c_network_mu_bias.txt", std::ios::in);
+    file[6].open(cur_path+"weight/loco_policy/obs_mean_fixed.txt", std::ios::in);
+    file[7].open(cur_path+"weight/loco_policy/obs_variance_fixed.txt", std::ios::in);
+    // file[6].open(cur_path+"weight/obs_mean_fixed_cadence.txt", std::ios::in);
+    // file[7].open(cur_path+"weight/obs_variance_fixed_cadence.txt", std::ios::in);
+    file[8].open(cur_path+"weight/loco_policy/a2c_network_critic_mlp_0_weight.txt", std::ios::in);
+    file[9].open(cur_path+"weight/loco_policy/a2c_network_critic_mlp_0_bias.txt", std::ios::in);
+    file[10].open(cur_path+"weight/loco_policy/a2c_network_critic_mlp_2_weight.txt", std::ios::in);
+    file[11].open(cur_path+"weight/loco_policy/a2c_network_critic_mlp_2_bias.txt", std::ios::in);
+    file[12].open(cur_path+"weight/loco_policy/a2c_network_value_weight.txt", std::ios::in);
+    file[13].open(cur_path+"weight/loco_policy/a2c_network_value_bias.txt", std::ios::in);
+
+    file[14].open(cur_path+"weight/commands.txt", std::ios::in);
+    file[15].open(cur_path+"weight/joint_status.txt", std::ios::in);
+    file[16].open(cur_path+"weight/disable_torque.txt", std::ios::in);
+    file[17].open(cur_path+"weight/locking_joint.txt", std::ios::in);
+
+    if (file[14].is_open()) {
+        file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd >> target_cadence_cmd;
+        std::cout << "target_vel_x_cmd : " << target_vel_x_cmd << std::endl;
+        std::cout << "target_vel_y_cmd : " << target_vel_y_cmd << std::endl;
+        std::cout << "target_vel_yaw_cmd : " << target_vel_yaw_cmd << std::endl;
+        std::cout << "target_cadence_cmd : " << target_cadence_cmd << std::endl;
+    } else {
+        std::cout << "failed to open commands.txt" << std::endl;
+    }
+
+    joint_status_.resize(13);
+    joint_status_.setZero();
+    if (file[15].is_open()) {
+        for (int i = 0; i < 13; i++) {
+            file[15] >> joint_status_(i);
+        }
+        std::cout << "joint_status_ : " << joint_status_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open joint_status.txt" << std::endl;
+    }
+
+    disable_torque_.resize(12);
+    disable_torque_.setZero();
+    if (file[16].is_open()) {
+        for (int i = 0; i < 12; i++) {
+            file[16] >> disable_torque_(i);
+        }
+        std::cout << "disable_torque_ : " << disable_torque_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open disable_torque.txt" << std::endl;
+    }
+
+    locking_joint_.resize(12);
+    locking_joint_.setZero();
+    if (file[17].is_open()) {
+        for (int i = 0; i < 12; i++) {
+            file[17] >> locking_joint_(i);
+        }
+        std::cout << "locking_joint_ : " << locking_joint_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open locking_joint_.txt" << std::endl;
+    }
+
+
+    // file[15].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_0_weight.txt", std::ios::in);
+    // file[16].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_0_bias.txt", std::ios::in);
+    // file[17].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_2_weight.txt", std::ios::in);
+    // file[18].open(cur_path+"weight/balance_policy/a2c_network_actor_mlp_2_bias.txt", std::ios::in);
+    // file[19].open(cur_path+"weight/balance_policy/a2c_network_mu_weight.txt", std::ios::in);
+    // file[20].open(cur_path+"weight/balance_policy/a2c_network_mu_bias.txt", std::ios::in);
+    // file[21].open(cur_path+"weight/balance_policy/obs_mean_fixed.txt", std::ios::in);
+    // file[22].open(cur_path+"weight/balance_policy/obs_variance_fixed.txt", std::ios::in);
+    // file[23].open(cur_path+"weight/balance_policy/a2c_network_critic_mlp_0_weight.txt", std::ios::in);
+    // file[24].open(cur_path+"weight/balance_policy/a2c_network_critic_mlp_0_bias.txt", std::ios::in);
+    // file[25].open(cur_path+"weight/balance_policy/a2c_network_critic_mlp_2_weight.txt", std::ios::in);
+    // file[26].open(cur_path+"weight/balance_policy/a2c_network_critic_mlp_2_bias.txt", std::ios::in);
+    // file[27].open(cur_path+"weight/balance_policy/a2c_network_value_weight.txt", std::ios::in);
+    // file[28].open(cur_path+"weight/balance_policy/a2c_network_value_bias.txt", std::ios::in);
 
 
     if(!file[0].is_open())
@@ -289,6 +378,237 @@ void CustomController::loadNetwork()
             }
         }
     }
+
+    // //////////////////////////////////balance policy
+    // /////////////////////////////////////////////////
+    // if(!file[15].is_open())
+    // {
+    //     std::cout<<"Can not find the weight file"<<std::endl;
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[15].eof() && row != balance_policy_net_w0_.rows())
+    // {
+    //     file[15] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_policy_net_w0_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_policy_net_w0_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[16].eof() && row != balance_policy_net_b0_.rows())
+    // {
+    //     file[16] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_policy_net_b0_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_policy_net_b0_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[17].eof() && row != balance_policy_net_w2_.rows())
+    // {
+    //     file[17] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_policy_net_w2_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_policy_net_w2_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[18].eof() && row != balance_policy_net_b2_.rows())
+    // {
+    //     file[18] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_policy_net_b2_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_policy_net_b2_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[19].eof() && row != balance_action_net_w_.rows())
+    // {
+    //     file[19] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_action_net_w_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_action_net_w_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[20].eof() && row != balance_action_net_b_.rows())
+    // {
+    //     file[20] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_action_net_b_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_action_net_b_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[21].eof() && row != balance_state_mean_.rows())
+    // {
+    //     file[21] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_state_mean_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_state_mean_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[22].eof() && row != balance_state_var_.rows())
+    // {
+    //     file[22] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_state_var_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_state_var_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[23].eof() && row != balance_value_net_w0_.rows())
+    // {
+    //     file[23] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_w0_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_w0_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[24].eof() && row != balance_value_net_b0_.rows())
+    // {
+    //     file[24] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_b0_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_b0_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[25].eof() && row != balance_value_net_w2_.rows())
+    // {
+    //     file[25] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_w2_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_w2_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[26].eof() && row != balance_value_net_b2_.rows())
+    // {
+    //     file[26] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_b2_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_b2_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[27].eof() && row != balance_value_net_w_.rows())
+    // {
+    //     file[27] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_w_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_w_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
+    // row = 0;
+    // col = 0;
+    // while(!file[28].eof() && row != balance_value_net_b_.rows())
+    // {
+    //     file[28] >> temp;
+    //     if(temp != '\n')
+    //     {
+    //         balance_value_net_b_(row, col) = temp;
+    //         col ++;
+    //         if (col == balance_value_net_b_.cols())
+    //         {
+    //             col = 0;
+    //             row ++;
+    //         }
+    //     }
+    // }
 }
 
 void CustomController::initVariable()
@@ -311,6 +631,31 @@ void CustomController::initVariable()
     value_net_b_.resize(1, 1);
     value_hidden_layer1_.resize(num_hidden, 1);
     value_hidden_layer2_.resize(num_hidden, 1);
+
+    balance_policy_net_w0_.resize(num_hidden, num_state);
+    balance_policy_net_b0_.resize(num_hidden, 1);
+    balance_policy_net_w2_.resize(num_hidden, num_hidden);
+    balance_policy_net_b2_.resize(num_hidden, 1);
+    balance_action_net_w_.resize(num_action, num_hidden);
+    balance_action_net_b_.resize(num_action, 1);
+    balance_hidden_layer1_.resize(num_hidden, 1);
+    balance_hidden_layer2_.resize(num_hidden, 1);
+    balance_rl_action_.resize(num_action, 1);
+
+    balance_value_net_w0_.resize(num_hidden, num_state);
+    balance_value_net_b0_.resize(num_hidden, 1);
+    balance_value_net_w2_.resize(num_hidden, num_hidden);
+    balance_value_net_b2_.resize(num_hidden, 1);
+    balance_value_net_w_.resize(1, num_hidden);
+    balance_value_net_b_.resize(1, 1);
+    balance_value_hidden_layer1_.resize(num_hidden, 1);
+    balance_value_hidden_layer2_.resize(num_hidden, 1);
+
+    balance_state_cur_.resize(num_cur_state, 1);
+    balance_state_.resize(num_state, 1);
+    balance_state_buffer_.resize(num_cur_state*num_state_skip*num_state_hist, 1);
+    balance_state_mean_.resize(num_cur_state, 1);
+    balance_state_var_.resize(num_cur_state, 1);
     
     state_cur_.resize(num_cur_state, 1);
     state_.resize(num_state, 1);
@@ -342,12 +687,14 @@ void CustomController::initVariable()
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0,
                         100.0, 100.0,
                         400.0, 1000.0, 400.0, 400.0, 400.0, 400.0, 100.0, 100.0;
+    // kp_.diagonal() /= 9.0;
     kv_.diagonal() << 15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         15.0, 50.0, 20.0, 25.0, 24.0, 24.0,
                         200.0, 100.0, 100.0,
                         10.0, 28.0, 10.0, 10.0, 10.0, 10.0, 3.0, 3.0,
                         2.0, 2.0,
                         10.0, 28.0, 10.0, 10.0, 10.0, 10.0, 3.0, 3.0;
+    // kv_.diagonal() /= 3.0;
 }
 
 Eigen::Vector3d CustomController::mat2euler(Eigen::Matrix3d mat)
@@ -422,18 +769,22 @@ void CustomController::processObservation()
     euler_angle_ = DyrosMath::rot2Euler_tf(q.toRotationMatrix());
 
     state_cur_(data_idx) = euler_angle_(0);
+    // balance_state_cur_(data_idx) = euler_angle_(0);
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(1);
+    // balance_state_cur_(data_idx) = euler_angle_(1);
     data_idx++;
 
     state_cur_(data_idx) = euler_angle_(2);
+    // balance_state_cur_(data_idx) = euler_angle_(2);
     data_idx++;
 
 
     for (int i = 0; i < num_actuator_action; i++)
     {
         state_cur_(data_idx) = q_noise_(i);
+        // balance_state_cur_(data_idx) = q_noise_(i);
         data_idx++;
     }
 
@@ -442,72 +793,179 @@ void CustomController::processObservation()
         if (is_on_robot_)
         {
             state_cur_(data_idx) = q_vel_noise_(i);
+            // balance_state_cur_(data_idx) = q_vel_noise_(i);
         }
         else
         {
-            state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6); //q_vel_noise_(i);
+            state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6);
+            // balance_state_cur_(data_idx) = q_vel_noise_(i); //rd_cc_.q_dot_virtual_(i+6);
         }
         data_idx++;
     }
 
     float squat_duration = 1.7995;
+    // action_dt_accumulate_ = 0;
     phase_ = std::fmod((rd_cc_.control_time_us_-start_time_)/1e6 + action_dt_accumulate_, squat_duration) / squat_duration;
 
     state_cur_(data_idx) = sin(2*M_PI*phase_);
+    // balance_state_cur_(data_idx) = sin(2*M_PI*phase_);
     data_idx++;
     state_cur_(data_idx) = cos(2*M_PI*phase_);
+    // balance_state_cur_(data_idx) = cos(2*M_PI*phase_);
     data_idx++;
 
-    // state_cur_(data_idx) = 0.2;//target_vel_x_;
-    state_cur_(data_idx) = target_vel_x_;//target_vel_x_;
+    // float init_vel = 0.0;
+    // float max_vel = target_vel_x_cmd;
+
+    // if(walking_tick_hk_ > 0 && walking_tick_hk_ < 6000)
+    // {
+    //     target_vel_x_ = init_vel;
+    // }
+    // else if(walking_tick_hk_ >= 6000 && walking_tick_hk_ < 12000)
+    // {
+    //     target_vel_x_ = max_vel * (walking_tick_hk_ - 6000) / 6000;
+    // }
+    // else if(walking_tick_hk_ >= 12000 && walking_tick_hk_ < 22000)
+    // {
+    //     target_vel_x_ = max_vel;
+    // }
+    // else if(walking_tick_hk_ >= 22000 && walking_tick_hk_ < 28000)
+    // {
+    //     target_vel_x_ = max_vel * (28000 - walking_tick_hk_) / 6000;
+    // }
+    // else
+    // {
+    //     target_vel_x_ = init_vel;
+    // }
+    
+    // if(value_ < 140){
+    //     target_vel_x_ = 0.0;
+    // } 
+
+
+    // state_cur_(data_idx) = 0.0;//target_vel_x_;
+    // state_cur_(data_idx) = target_vel_x_;
+    // balance_state_cur_(data_idx) = 0.0;
+    state_cur_(data_idx) = target_vel_x_cmd;
     data_idx++;
 
     // state_cur_(data_idx) = 0.0;//target_vel_y_;
-    state_cur_(data_idx) = target_vel_y_;//target_vel_y_;
+    // state_cur_(data_idx) = target_vel_y_;
+    state_cur_(data_idx) = target_vel_y_cmd;
+    // balance_state_cur_(data_idx) = 0.0;
     data_idx++;
 
-    state_cur_(data_idx) = rd_cc_.LF_FT(2);
+    // state_cur_(data_idx) = 0.0; //target_vel_yaw_;
+    // state_cur_(data_idx) = target_vel_yaw_;
+    state_cur_(data_idx) = target_vel_yaw_cmd;
     data_idx++;
 
-    state_cur_(data_idx) = rd_cc_.RF_FT(2);
-    data_idx++;
+    for (int i=0; i<3; i++)
+        v_global(i) = rd_cc_.q_dot_virtual_(i);
+    for (int i=0; i<3; i++)
+        w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
+    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
+    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
 
-    state_cur_(data_idx) = rd_cc_.LF_FT(3);
-    data_idx++;
+    // for (int i=0; i<6; i++)
+    // {
+    //     state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+    //     // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+    //     data_idx++;
+    // }
 
-    state_cur_(data_idx) = rd_cc_.RF_FT(3);
-    data_idx++;
+    for (int i=0; i<3; i++)
+    {
+        state_cur_(data_idx) = v_local(i);
+        // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+        data_idx++;
+    }
 
-    state_cur_(data_idx) = rd_cc_.LF_FT(4);
-    data_idx++;
+    for (int i=0; i<3; i++)
+    {
+        state_cur_(data_idx) = w_local(i);
+        // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+        data_idx++;
+    }
 
-    state_cur_(data_idx) = rd_cc_.RF_FT(4);
-    data_idx++;
+    // joint_mask.resize(13);
+    // joint_mask.setZero();
+    // joint_mask << 1.0,
+    //                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    //                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
-    // state_cur_(data_idx) = 0.2;//target_ang_vel_yaw_;
-    state_cur_(data_idx) = target_ang_vel_yaw_;//target_ang_vel_yaw_;
-    data_idx++;
+    for (int i=0; i<13; i++)
+    {
+        state_cur_(data_idx) = joint_status_(i);
+        // std::cout << "joint_mask(" << i << ") : " << joint_mask(i) << std::endl;
+        data_idx++;
+    }
+
+    // std::cout << "state_cur_ : " << state_cur_.transpose() << std::endl;
+
+
+    // state_cur_(data_idx) = 60.0;
+    // state_cur_(data_idx) = target_cadence_cmd;
+    // state_cur_(data_idx) = 10.0;
+    // data_idx++;
+    // state_cur_(data_idx) = -rd_cc_.LF_FT(2);
+    // data_idx++;
+
+    // state_cur_(data_idx) = -rd_cc_.RF_FT(2);
+    // data_idx++;
+
+    // state_cur_(data_idx) = rd_cc_.LF_FT(3);
+    // data_idx++;
+
+    // state_cur_(data_idx) = rd_cc_.RF_FT(3);
+    // data_idx++;
+
+    // state_cur_(data_idx) = rd_cc_.LF_FT(4);
+    // data_idx++;
+
+    // state_cur_(data_idx) = rd_cc_.RF_FT(4);
+    // data_idx++;
 
     for (int i = 0; i <num_actuator_action; i++) 
     {
-        state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
+        if(loco_policy_on){
+            state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
+            // balance_state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(i), -1.0, 1.0);
+        }
+        else{
+            state_cur_(data_idx) = DyrosMath::minmax_cut(balance_rl_action_(i), -1.0, 1.0);
+            // balance_state_cur_(data_idx) = DyrosMath::minmax_cut(balance_rl_action_(i), -1.0, 1.0);
+        }
         data_idx++;
     }
-    state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
+    if(loco_policy_on){
+        state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
+        // balance_state_cur_(data_idx) = DyrosMath::minmax_cut(rl_action_(num_actuator_action), 0.0, 1.0);
+    }
+    else{
+        state_cur_(data_idx) = DyrosMath::minmax_cut(balance_rl_action_(num_actuator_action), 0.0, 1.0);
+        // balance_state_cur_(data_idx) = DyrosMath::minmax_cut(balance_rl_action_(num_actuator_action), 0.0, 1.0);
+    }
     data_idx++;
     
-    state_buffer_.block(0, 0, num_cur_state*(num_state_skip*num_state_hist-1),1) = state_buffer_.block(num_cur_state, 0, num_cur_state*(num_state_skip*num_state_hist-1),1);
-    state_buffer_.block(num_cur_state*(num_state_skip*num_state_hist-1), 0, num_cur_state,1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
+    state_buffer_.block(0, 0,         num_cur_state*(num_state_skip*num_state_hist-1),1) = state_buffer_.block(        num_cur_state, 0, num_cur_state*(num_state_skip*num_state_hist-1),1);
+    // balance_state_buffer_.block(0, 0, num_cur_state*(num_state_skip*num_state_hist-1),1) = balance_state_buffer_.block(num_cur_state, 0, num_cur_state*(num_state_skip*num_state_hist-1),1);
+
+
+    state_buffer_.block(        num_cur_state*(num_state_skip*num_state_hist-1), 0, num_cur_state,1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
+    // balance_state_buffer_.block(num_cur_state*(num_state_skip*num_state_hist-1), 0, num_cur_state,1) = (balance_state_cur_ - balance_state_mean_).array() / balance_state_var_.cwiseSqrt().array();
 
     // Internal State First
     for (int i = 0; i < num_state_hist; i++)
     {
         state_.block(num_cur_internal_state*i, 0, num_cur_internal_state, 1) = state_buffer_.block(num_cur_state*(num_state_skip*(i+1)-1), 0, num_cur_internal_state, 1);
+        // balance_state_.block(num_cur_internal_state*i, 0, num_cur_internal_state, 1) = balance_state_buffer_.block(num_cur_state*(num_state_skip*(i+1)-1), 0, num_cur_internal_state, 1);
     }
     // Action History Second
     for (int i = 0; i < num_state_hist-1; i++)
     {
         state_.block(num_state_hist*num_cur_internal_state + num_action*i, 0, num_action, 1) = state_buffer_.block(num_cur_state*(num_state_skip*(i+1)) + num_cur_internal_state, 0, num_action, 1);
+        // balance_state_.block(num_state_hist*num_cur_internal_state + num_action*i, 0, num_action, 1) = balance_state_buffer_.block(num_cur_state*(num_state_skip*(i+1)) + num_cur_internal_state, 0, num_action, 1);
     }
 
 }
@@ -545,6 +1003,40 @@ void CustomController::feedforwardPolicy()
     }
 
     value_ = (value_net_w_ * value_hidden_layer2_ + value_net_b_)(0);
+
+
+//     /// balance policy
+//     balance_hidden_layer1_ = balance_policy_net_w0_ * balance_state_ + balance_policy_net_b0_;
+//     for (int i = 0; i < num_hidden; i++) 
+//     {
+//         if (balance_hidden_layer1_(i) < 0)
+//             balance_hidden_layer1_(i) = 0.0;
+//     }
+
+//     balance_hidden_layer2_ = balance_policy_net_w2_ * balance_hidden_layer1_ + balance_policy_net_b2_;
+//     for (int i = 0; i < num_hidden; i++) 
+//     {
+//         if (balance_hidden_layer2_(i) < 0)
+//             balance_hidden_layer2_(i) = 0.0;
+//     }
+
+//     balance_rl_action_ = balance_action_net_w_ * balance_hidden_layer2_ + balance_action_net_b_;
+
+//     balance_value_hidden_layer1_ = balance_value_net_w0_ * balance_state_ + balance_value_net_b0_;
+//     for (int i = 0; i < num_hidden; i++) 
+//     {
+//         if (balance_value_hidden_layer1_(i) < 0)
+//             balance_value_hidden_layer1_(i) = 0.0;
+//     }
+
+//     balance_value_hidden_layer2_ = balance_value_net_w2_ * balance_value_hidden_layer1_ + balance_value_net_b2_;
+//     for (int i = 0; i < num_hidden; i++) 
+//     {
+//         if (balance_value_hidden_layer2_(i) < 0)
+//             balance_value_hidden_layer2_(i) = 0.0;
+//     }
+
+//     balance_value_ = (balance_value_net_w_ * balance_value_hidden_layer2_ + balance_value_net_b_)(0);
     
 }
 
@@ -561,18 +1053,21 @@ void CustomController::computeSlow()
             time_cur_ = start_time_ / 1e6;
             time_pre_ = time_cur_ - 0.005;
             time_inference_pre_ = rd_cc_.control_time_us_ - (1/249.9)*1e6;
-            // ft_left_init_ = abs(rd_cc_.LF_FT(2));
-            // ft_right_init_ = abs(rd_cc_.RF_FT(2));
 
             rd_.tc_init = false;
             std::cout<<"cc mode 7"<<std::endl;
             torque_init_ = rd_cc_.torque_desired;
 
+            walking_tick_hk_ = 0;
+            ext_force_tick_ = 0;
+
             processNoise();
             processObservation();
             for (int i = 0; i < num_state_skip*num_state_hist; i++) 
             {
-                state_buffer_.block(num_cur_state*i, 0, num_cur_state, 1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
+                // state_buffer_.block(num_cur_state*i, 0, num_cur_state, 1) = (state_cur_ - state_mean_).array() / state_var_.cwiseSqrt().array();
+                state_buffer_.block(num_cur_state*i, 0, num_cur_state, 1).setZero();
+                // balance_state_buffer_.block(num_cur_state*i, 0, num_cur_state, 1).setZero();
             }
         }
 
@@ -583,10 +1078,22 @@ void CustomController::computeSlow()
         {
             processObservation();
             feedforwardPolicy();
-            
-            action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0);
+            if(loco_policy_on){
+                action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
+                // action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*20/250.0, 0.0, 20/250.0);
+            }
+            else{
+                // action_dt_accumulate_ += DyrosMath::minmax_cut(balance_rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
+            }
 
-            if (value_ < 30.0)
+            // if (value_ < 130.0){
+            //     loco_policy_on = false;
+            // }
+            // else{
+            //     loco_policy_on = true;
+            // }
+
+            if (value_ < 10.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -594,30 +1101,50 @@ void CustomController::computeSlow()
                     stop_start_time_ = rd_cc_.control_time_us_;
                     q_stop_ = q_noise_;
                     std::cout << "Stop by Value Function" << std::endl;
-                    std::cout << "value_ : " << value_ << std::endl;
                 }
-                std::cout << "value_ : " << value_ << std::endl;
-
+                std::cout << "Stop by Value Function" << std::endl;
+                std::cout << "Value :" << value_ << std::endl;
             }
 
             if (is_write_file_)
             {
-                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t";
-                    writeFile << phase_ << "\t";
-                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/250.0, 0.0, 1/250.0) << "\t";
+                    writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t"; // 1
+                    writeFile << phase_ << "\t"; // 2
+                    writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/100.0, 0.0, 1/100.0) << "\t"; //phase modulation //3
 
-                    writeFile << rd_cc_.LF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t";
-                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t";
+                    writeFile << rd_cc_.LF_FT.transpose() << "\t";    //4~9   
+                    writeFile << rd_cc_.RF_FT.transpose() << "\t";    //10~15 
+                    writeFile << rd_cc_.LF_CF_FT.transpose() << "\t"; //16~21
+                    writeFile << rd_cc_.RF_CF_FT.transpose() << "\t"; //22~27 
 
-                    writeFile << rd_cc_.torque_desired.transpose()  << "\t";
-                    writeFile << q_noise_.transpose() << "\t";
-                    writeFile << q_dot_lpf_.transpose() << "\t";
-                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
-                    writeFile << rd_cc_.q_virtual_.transpose() << "\t";
+                    writeFile << rd_cc_.torque_desired.transpose()  << "\t"; // 28~60
+                    writeFile << q_noise_.transpose() << "\t"; // 61~93
+                    writeFile << q_dot_lpf_.transpose() << "\t"; // 94~126
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t"; //127~165 ?  //127: x_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(0) << "\t"; //127  x_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(1) << "\t"; //128  y_vel
+                    writeFile << rd_cc_.q_dot_virtual_.transpose()(2) << "\t"; //129  z_vel
+                    // writeFile << rd_cc_.q_virtual_.transpose() << "\t"; //173~205
 
-                    writeFile << value_ << "\t" << stop_by_value_thres_;
+                    writeFile << value_ << "\t" << stop_by_value_thres_; //130~131
+                    // writeFile << value_ << "\t" << stop_by_value_thres_ << "\t" << balance_value_ << "\t"; //130~131
+                    // writeFile << (float)loco_policy_on;
+                    writeFile << "\t" << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_; //132~134
+                    writeFile << "\t" << walking_tick_hk_ << "\t"; //135
+
+                    Eigen::Quaterniond q;
+                    q.x() = rd_cc_.q_virtual_(3);
+                    q.y() = rd_cc_.q_virtual_(4);
+                    q.z() = rd_cc_.q_virtual_(5);
+                    q.w() = rd_cc_.q_virtual_(MODEL_DOF_QVIRTUAL-1);
+                    for (int i=0; i<3; i++)
+                        v_global(i) = rd_cc_.q_dot_virtual_(i);
+                    for (int i=0; i<3; i++)
+                        w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
+                    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
+                    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
+                    writeFile << v_local.transpose() << "\t"; //136
+                    writeFile << w_local.transpose() << "\t"; //139
                 
                     writeFile << std::endl;
 
@@ -629,13 +1156,33 @@ void CustomController::computeSlow()
 
         for (int i = 0; i < num_actuator_action; i++)
         {
-            torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+            if(loco_policy_on){
+                torque_rl_(i) = DyrosMath::minmax_cut(rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+            }
+            else{
+                // torque_rl_(i) = DyrosMath::minmax_cut(balance_rl_action_(i)*torque_bound_(i), -torque_bound_(i), torque_bound_(i));
+            }
         }
         for (int i = num_actuator_action; i < MODEL_DOF; i++)
         {
             torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
         }
-        
+
+        // // mimic sholder joint position to hip pitch joint position
+        // torque_rl_(16) = kp_(16,16) * (-(q_noise_(2)+0.24) - q_noise_(16)) - kv_(16,16)*q_vel_noise_(16);
+        // torque_rl_(26) = kp_(26,26) * ((q_noise_(8)+0.24) - q_noise_(26)) - kv_(26,26)*q_vel_noise_(26);
+        // // std::cout << "q_noise_(2) : " << q_noise_(2) << std::endl;
+        // // std::cout << "q_noise_(16) : " << q_noise_(16) << std::endl;
+        // // std::cout << "q_noise_(8) : " << q_noise_(8) << std::endl;
+        // // std::cout << "q_noise_(26) : " << q_noise_(26) << std::endl;
+        // // std::cout << "q_noise_(2) - q_noise_(16) : " << q_noise_(2) - q_noise_(16) << std::endl;
+        // // std::cout << "q_noise_(8) - q_noise_(26) : " << q_noise_(8) - q_noise_(26) << std::endl;
+        // std::cout << "torque_rl_(16) : " << torque_rl_(16) << std::endl;
+        // std::cout << "torque_rl_(26) : " << torque_rl_(26) << std::endl;
+
+        // torque_rl_(16) = 0;
+        // torque_rl_(26) = 0;
+
         if (rd_cc_.control_time_us_ < start_time_ + 0.1e6)
         {
             for (int i = 0; i <MODEL_DOF; i++)
@@ -646,7 +1193,42 @@ void CustomController::computeSlow()
         }
         else
         {
-             rd_.torque_desired = torque_rl_;
+
+            for (int i = 0; i < 12; i++)
+            {
+                if (locking_joint_(i) == 1)
+                {
+                    torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
+                    std::cout << "locking joint : " << i << std::endl;
+                    std::cout << "q_init_(" << i << ") : " << q_init_(i) << std::endl;
+                    std::cout << "q_noise_(" << i << ") : " << q_noise_(i) << std::endl;
+                    std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
+
+                }
+                if (disable_torque_(i) == 1)
+                {
+                    torque_rl_(i) = 0.0;
+                }
+            }
+
+            rd_.torque_desired = torque_rl_;
+            
+            // rd_.torque_desired(0) = 0.0;
+            // rd_.torque_desired(1) = 0.0;
+            // rd_.torque_desired(2) = 0.0;
+            // rd_.torque_desired(2) = kp_(2,2) * (q_init_(2) - q_noise_(2)) - kv_(2,2)*q_vel_noise_(2);
+            // rd_.torque_desired(2) = kp_(2,2) * (q_init_(2) - q_noise_(2)) - kv_(2,2)*q_vel_noise_(2);
+            // rd_.torque_desired(2) = kp_(2,2) * (q_init_(2) - q_noise_(2)) - kv_(2,2)*q_vel_noise_(2);
+            // rd_.torque_desired(3) = 0.0;
+            // rd_.torque_desired(4) = 0.0;
+            // rd_.torque_desired(5) = 0.0;
+            // rd_.torque_desired(6) = 0.0;
+            // for (int _joint : {3}) {
+            //     rd_.torque_desired(_joint) = kp_(_joint,_joint) * (q_init_(_joint) - q_noise_(_joint)) - kv_(_joint,_joint)*q_vel_noise_(_joint);
+            // }
+            // for (int _joint : {3}) {
+            //     rd_.torque_desired(_joint) = 10000 * (q_init_(_joint) - q_noise_(_joint)) - 50*q_vel_noise_(_joint);
+            // }
         }
 
         if (stop_by_value_thres_)
@@ -654,7 +1236,72 @@ void CustomController::computeSlow()
             rd_.torque_desired = kp_ * (q_stop_ - q_noise_) - kv_*q_vel_noise_;
         }
 
+        //// Loco Policy
+        // ext_force_apply_time_ = 1.0*hz_; //[s]
+        // force_temp_ = 70.0;
+        // ext_force_apply_time_ = 0.5*hz_; //[s]
+        // force_temp_ = 140.0;
+        // ext_force_apply_time_ = 0.3333*hz_; //[s]
+        // force_temp_ = 210.0;
+        // ext_force_apply_time_ = 0.2*hz_; //[s]
+        // force_temp_ = 350.0;
 
+        // Balance Policy
+        ext_force_apply_time_ = 1.0*hz_; //[s]
+        force_temp_ = 150.0;
+        theta_temp_ = 270.0;
+
+        if(walking_tick_hk_ == 50000){
+            ext_force_flag = false;
+            // ext_force_tick_ = 0;
+        }
+
+        if(ext_force_tick_ < ext_force_apply_time_ && ext_force_flag){
+                mujoco_applied_ext_force_.wrench.force.x = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+                mujoco_applied_ext_force_.wrench.force.y = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+                mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+
+                mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+
+                mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+                ext_force_tick_++;
+        }
+        else{
+            ext_force_tick_ = 0;
+            ext_force_flag = false;
+            // ext_force_flag_X_ = false;
+            // ext_force_flag_Y_ = false;
+            // ext_force_flag_A_ = false;
+            // ext_force_flag_B_ = false; 
+            mujoco_applied_ext_force_.wrench.force.x = 0; //x-axis linear force
+            mujoco_applied_ext_force_.wrench.force.y = 0; //y-axis linear force  
+            mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+
+            mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+
+            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        }
+
+        if(walking_tick_hk_ % 500 == 0)
+        {
+            std::cout << "walking_tick_hk_ : " << walking_tick_hk_ << std::endl;
+            std::cout << "phase : " << phase_ << std::endl;
+            std::cout << "target_vel_x_ : " << target_vel_x_ << std::endl;
+            std::cout << "target_vel_y_ : " << target_vel_y_ << std::endl;
+            std::cout << "target_vel_yaw_ : " << target_vel_yaw_ << std::endl;
+            std::cout << "ext_force_flag :" << ext_force_flag << std::endl;
+            std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
+            std::cout << "value_ : " << value_ << std::endl;
+            // std::cout << "balance_value_ : " << balance_value_ << std::endl;
+        }
+
+        walking_tick_hk_++;
     }
 }
 
@@ -679,7 +1326,7 @@ void CustomController::copyRobotData(RobotData &rd_l)
 
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.5, 0.8);
+    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
     target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
-    target_ang_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.3, 0.3);
+    target_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.5, 0.5);
 }

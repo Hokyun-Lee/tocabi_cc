@@ -5,6 +5,9 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Float32MultiArray.h>
+
+#include <mujoco_ros_msgs/applyforce.h>
 
 class CustomController
 {
@@ -30,23 +33,23 @@ public:
     void initVariable();
     Eigen::Vector3d mat2euler(Eigen::Matrix3d mat);
 
-    // static const int num_action = 13;
-    // static const int num_actuator_action = 12;
-    // static const int num_cur_state = 50;
-    // static const int num_cur_internal_state = 37;
-    // static const int num_state_skip = 2;
-    // static const int num_state_hist = 5;
-    // static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
-    // static const int num_hidden = 256;
+    Eigen::VectorXd joint_mask;
+    static const int num_cur_state = 64;
+    static const int num_cur_internal_state = 51;
 
     static const int num_action = 13;
     static const int num_actuator_action = 12;
-    static const int num_cur_state = 51;
-    static const int num_cur_internal_state = 38;
+    // static const int num_cur_state = 50;
+    // static const int num_cur_internal_state = 37;
+
+    // static const int num_cur_state = 51;
+    // static const int num_cur_internal_state = 38;
     static const int num_state_skip = 2;
-    static const int num_state_hist = 5;
+    static const int num_state_hist = 10;
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
     static const int num_hidden = 256;
+
+    Eigen::Vector3d v_global, w_global;
 
     Eigen::MatrixXd policy_net_w0_;
     Eigen::MatrixXd policy_net_b0_;
@@ -67,6 +70,33 @@ public:
     Eigen::MatrixXd value_hidden_layer1_;
     Eigen::MatrixXd value_hidden_layer2_;
     double value_;
+
+    // balance policy
+    Eigen::MatrixXd balance_policy_net_w0_;
+    Eigen::MatrixXd balance_policy_net_b0_;
+    Eigen::MatrixXd balance_policy_net_w2_;
+    Eigen::MatrixXd balance_policy_net_b2_;
+    Eigen::MatrixXd balance_action_net_w_;
+    Eigen::MatrixXd balance_action_net_b_;
+    Eigen::MatrixXd balance_hidden_layer1_;
+    Eigen::MatrixXd balance_hidden_layer2_;
+    Eigen::MatrixXd balance_rl_action_;
+
+    Eigen::MatrixXd balance_value_net_w0_;
+    Eigen::MatrixXd balance_value_net_b0_;
+    Eigen::MatrixXd balance_value_net_w2_;
+    Eigen::MatrixXd balance_value_net_b2_;
+    Eigen::MatrixXd balance_value_net_w_;
+    Eigen::MatrixXd balance_value_net_b_;
+    Eigen::MatrixXd balance_value_hidden_layer1_;
+    Eigen::MatrixXd balance_value_hidden_layer2_;
+    double balance_value_;
+
+    Eigen::MatrixXd balance_state_;
+    Eigen::MatrixXd balance_state_cur_;
+    Eigen::MatrixXd balance_state_buffer_;
+    Eigen::MatrixXd balance_state_mean_;
+    Eigen::MatrixXd balance_state_var_;
 
     bool stop_by_value_thres_ = false;
     Eigen::Matrix<double, MODEL_DOF, 1> q_stop_;
@@ -109,9 +139,6 @@ public:
 
     Eigen::Vector3d euler_angle_;
 
-    // float ft_left_init_ = 500.0;
-    // float ft_right_init_ = 500.0;
-
     // Joystick
     ros::NodeHandle nh_;
 
@@ -120,7 +147,33 @@ public:
 
     double target_vel_x_ = 0.0;
     double target_vel_y_ = 0.0;
-    double target_ang_vel_yaw_ = 0.0;
+    double target_vel_yaw_ = 0.0;
+
+    double target_vel_x_cmd = 0.0;
+    double target_vel_y_cmd = 0.0;
+    double target_vel_yaw_cmd = 0.0;
+    double target_cadence_cmd = 0.0;
+
+    Eigen::VectorXd joint_status_;
+    Eigen::VectorXd disable_torque_;
+    Eigen::VectorXd locking_joint_;
+
+    ros::Publisher mujoco_ext_force_apply_pub;
+    // std_msgs::Float32MultiArray mujoco_applied_ext_force_;
+    mujoco_ros_msgs::applyforce mujoco_applied_ext_force_;
+    double force_temp_ = 0;
+    double theta_temp_ = 0;
+    bool ext_force_flag = false;
+    bool ext_force_flag_X_ = false;
+    bool ext_force_flag_Y_ = false;
+    bool ext_force_flag_A_ = false;
+    bool ext_force_flag_B_ = false;
+    double ext_force_apply_time_ = 0.0;
+    int ext_force_tick_ = 0;
+    int walking_tick_hk_ = 0;
+    // double target_vel_x_2_ = 0.0;
+    double hz_ = 2000.0;
+    bool loco_policy_on = true;
 
 private:
     Eigen::VectorQd ControlVal_;
