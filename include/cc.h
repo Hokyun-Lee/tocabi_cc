@@ -113,6 +113,8 @@ public:
 
     float phase_ = 0.0;
 
+    bool is_joystick_ = false;
+
     bool is_on_robot_ = true;
     bool is_write_file_ = true;
     Eigen::Matrix<double, MODEL_DOF, 1> q_dot_lpf_;
@@ -155,6 +157,10 @@ public:
     double target_vel_yaw_cmd = 0.0;
     double target_cadence_cmd = 0.0;
 
+    double target_vel_x_joy_ = 0.0;
+    double target_vel_y_joy_ = 0.0;
+    double target_vel_yaw_joy_ = 0.0;
+
     Eigen::VectorXd joint_status_;
     Eigen::VectorXd disable_torque_;
     Eigen::VectorXd locking_joint_;
@@ -175,6 +181,8 @@ public:
     // double target_vel_x_2_ = 0.0;
     double hz_ = 2000.0;
     bool loco_policy_on = true;
+
+    bool random_fault_injection_ = true;
 
 private:
     Eigen::VectorQd ControlVal_;

@@ -846,19 +846,37 @@ void CustomController::processObservation()
     // state_cur_(data_idx) = 0.0;//target_vel_x_;
     // state_cur_(data_idx) = target_vel_x_;
     // balance_state_cur_(data_idx) = 0.0;
-    state_cur_(data_idx) = target_vel_x_cmd;
-    data_idx++;
+    if (is_joystick_){
+        state_cur_(data_idx) = target_vel_x_joy_;
+        data_idx++;
 
-    // state_cur_(data_idx) = 0.0;//target_vel_y_;
-    // state_cur_(data_idx) = target_vel_y_;
-    state_cur_(data_idx) = target_vel_y_cmd;
-    // balance_state_cur_(data_idx) = 0.0;
-    data_idx++;
+        state_cur_(data_idx) = target_vel_y_joy_;
+        data_idx++;
 
-    // state_cur_(data_idx) = 0.0; //target_vel_yaw_;
-    // state_cur_(data_idx) = target_vel_yaw_;
-    state_cur_(data_idx) = target_vel_yaw_cmd;
-    data_idx++;
+        state_cur_(data_idx) = target_vel_yaw_joy_;
+        data_idx++;
+    }
+    else{
+        state_cur_(data_idx) = target_vel_x_cmd;
+        data_idx++;
+
+        state_cur_(data_idx) = target_vel_y_;
+        data_idx++;
+
+        state_cur_(data_idx) = target_vel_yaw_;
+        data_idx++;
+    }
+
+    // // state_cur_(data_idx) = 0.0;//target_vel_y_;
+    // // state_cur_(data_idx) = target_vel_y_;
+    // state_cur_(data_idx) = target_vel_y_cmd;
+    // // balance_state_cur_(data_idx) = 0.0;
+    // data_idx++;
+
+    // // state_cur_(data_idx) = 0.0; //target_vel_yaw_;
+    // // state_cur_(data_idx) = target_vel_yaw_;
+    // state_cur_(data_idx) = target_vel_yaw_cmd;
+    // data_idx++;
 
     for (int i=0; i<3; i++)
         v_global(i) = rd_cc_.q_dot_virtual_(i);
@@ -1073,6 +1091,166 @@ void CustomController::computeSlow()
 
         processNoise();
 
+        // std::cout << "hz_: " << hz_ << std::endl;
+        // std::cout << "walking_tick_hk_: " << walking_tick_hk_ << std::endl;
+
+        if(random_fault_injection_){
+            if(walking_tick_hk_ < 20 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 40 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Hip Roll Joint Locked!!!!!!!!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 1.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 1.0, 0.0, 0.0, 0.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 60 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 80 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Ankle Pitch Joint Locked!!!!!!!!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 100 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 120 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Hip Yaw Joint Power-Lossed!!!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 140 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 160 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Knee Pitch Joint Locked!!!!!!" << std::endl;
+                }
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 180 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 200 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Ankle Roll Joint Locked!!!!!!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 220 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 240 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Hip Yaw Joint Locked!!!!!!!!!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 260 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else if(walking_tick_hk_ < 280 * (int)hz_){
+                if(walking_tick_hk_ % (int)hz_ == 0){
+                    std::cout << "Random Joint Fault Injection!" << std::endl;
+                    std::cout << "Ankle Roll Joint Power-Lossed!" << std::endl;
+                }
+                joint_status_ << 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+                locking_joint_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                disable_torque_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+            }
+            else if(walking_tick_hk_ < 300 * (int)hz_){
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+            else{
+                joint_status_ << 1.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                locking_joint_.setZero();
+                disable_torque_.setZero();
+            }
+        }
+
         // processObservation and feedforwardPolicy mean time: 15 us, max 53 us
         if ((rd_cc_.control_time_us_ - time_inference_pre_)/1.0e6 >= 1/250.0 - 1/10000.0)
         {
@@ -1208,7 +1386,7 @@ void CustomController::computeSlow()
                 if (locking_joint_(i) == 1)
                 {
                     torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
-                    if(walking_tick_hk_ % 500 == 0)
+                    if(walking_tick_hk_ % (int)hz_ == 0)
                     {
                         std::cout << "locking joint : " << i << std::endl;
                         std::cout << "q_init_(" << i << ") : " << q_init_(i) << std::endl;
@@ -1219,7 +1397,7 @@ void CustomController::computeSlow()
                 if (disable_torque_(i) == 1)
                 {
                     torque_rl_(i) = 0.0;
-                    if(walking_tick_hk_ % 500 == 0)
+                    if(walking_tick_hk_ % (int)hz_== 0)
                     {
                         std::cout << "disable torque : " << i << std::endl;
                         std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
@@ -1263,15 +1441,15 @@ void CustomController::computeSlow()
         // ext_force_apply_time_ = 0.2*hz_; //[s]
         // force_temp_ = 350.0;
 
-        // Balance Policy
-        ext_force_apply_time_ = 1.0*hz_; //[s]
-        force_temp_ = 150.0;
-        theta_temp_ = 270.0;
+        // // Balance Policy
+        // ext_force_apply_time_ = 1.0*hz_; //[s]
+        // force_temp_ = 150.0;
+        // theta_temp_ = 270.0;
 
-        if(walking_tick_hk_ == 50000){
-            ext_force_flag = false;
-            // ext_force_tick_ = 0;
-        }
+        // if(walking_tick_hk_ == 50000){
+        //     ext_force_flag = false;
+        //     // ext_force_tick_ = 0;
+        // }
 
         // if(ext_force_tick_ < ext_force_apply_time_ && ext_force_flag){
         //         mujoco_applied_ext_force_.wrench.force.x = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
@@ -1343,7 +1521,8 @@ void CustomController::copyRobotData(RobotData &rd_l)
 
 void CustomController::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-    target_vel_x_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.5);
-    target_vel_y_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.2, 0.2);
-    target_vel_yaw_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.5, 0.5);
+    is_joystick_ = true;
+    target_vel_x_joy_ = DyrosMath::minmax_cut(0.5*joy->axes[1], -0.2, 0.3);
+    target_vel_y_joy_ = DyrosMath::minmax_cut(0.5*joy->axes[0], -0.01, 0.01);
+    target_vel_yaw_joy_ = DyrosMath::minmax_cut(0.5*joy->axes[3], -0.2, 0.2);
 }
