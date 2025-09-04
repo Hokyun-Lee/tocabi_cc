@@ -49,7 +49,7 @@ public:
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
     static const int num_hidden = 256;
 
-    
+    Eigen::Vector3d v_global, w_global;
 
     Eigen::MatrixXd policy_net_w0_;
     Eigen::MatrixXd policy_net_b0_;
@@ -156,6 +156,7 @@ public:
 
     Eigen::VectorXd joint_status_;
     Eigen::VectorXd disable_torque_;
+    Eigen::VectorXd locking_joint_;
 
     ros::Publisher mujoco_ext_force_apply_pub;
     // std_msgs::Float32MultiArray mujoco_applied_ext_force_;

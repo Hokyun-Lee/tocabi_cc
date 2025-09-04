@@ -85,6 +85,7 @@ void CustomController::loadNetwork()
     file[14].open(cur_path+"weight/commands.txt", std::ios::in);
     file[15].open(cur_path+"weight/joint_status.txt", std::ios::in);
     file[16].open(cur_path+"weight/disable_torque.txt", std::ios::in);
+    file[17].open(cur_path+"weight/locking_joint.txt", std::ios::in);
 
     if (file[14].is_open()) {
         file[14] >> target_vel_x_cmd >> target_vel_y_cmd >> target_vel_yaw_cmd >> target_cadence_cmd;
@@ -116,6 +117,17 @@ void CustomController::loadNetwork()
         std::cout << "disable_torque_ : " << disable_torque_.transpose() << std::endl;
     } else {
         std::cout << "failed to open disable_torque.txt" << std::endl;
+    }
+
+    locking_joint_.resize(12);
+    locking_joint_.setZero();
+    if (file[17].is_open()) {
+        for (int i = 0; i < 12; i++) {
+            file[17] >> locking_joint_(i);
+        }
+        std::cout << "locking_joint_ : " << locking_joint_.transpose() << std::endl;
+    } else {
+        std::cout << "failed to open locking_joint_.txt" << std::endl;
     }
 
 
@@ -792,6 +804,7 @@ void CustomController::processObservation()
     }
 
     float squat_duration = 1.7995;
+    // action_dt_accumulate_ = 0;
     phase_ = std::fmod((rd_cc_.control_time_us_-start_time_)/1e6 + action_dt_accumulate_, squat_duration) / squat_duration;
 
     state_cur_(data_idx) = sin(2*M_PI*phase_);
@@ -847,9 +860,30 @@ void CustomController::processObservation()
     state_cur_(data_idx) = target_vel_yaw_cmd;
     data_idx++;
 
-    for (int i=0; i<6; i++)
+    for (int i=0; i<3; i++)
+        v_global(i) = rd_cc_.q_dot_virtual_(i);
+    for (int i=0; i<3; i++)
+        w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
+    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
+    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
+
+    // for (int i=0; i<6; i++)
+    // {
+    //     state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+    //     // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+    //     data_idx++;
+    // }
+
+    for (int i=0; i<3; i++)
     {
-        state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+        state_cur_(data_idx) = v_local(i);
+        // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
+        data_idx++;
+    }
+
+    for (int i=0; i<3; i++)
+    {
+        state_cur_(data_idx) = w_local(i);
         // balance_state_cur_(data_idx) = rd_cc_.q_dot_virtual_(i);
         data_idx++;
     }
@@ -1046,6 +1080,7 @@ void CustomController::computeSlow()
             feedforwardPolicy();
             if(loco_policy_on){
                 action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
+                // action_dt_accumulate_ += DyrosMath::minmax_cut(rl_action_(num_action-1)*20/250.0, 0.0, 20/250.0);
             }
             else{
                 // action_dt_accumulate_ += DyrosMath::minmax_cut(balance_rl_action_(num_action-1)*5/250.0, 0.0, 5/250.0);
@@ -1058,7 +1093,7 @@ void CustomController::computeSlow()
             //     loco_policy_on = true;
             // }
 
-            if (value_ < 25.0)
+            if (value_ < 10.0)
             {
                 if (stop_by_value_thres_ == false)
                 {
@@ -1095,7 +1130,21 @@ void CustomController::computeSlow()
                     // writeFile << value_ << "\t" << stop_by_value_thres_ << "\t" << balance_value_ << "\t"; //130~131
                     // writeFile << (float)loco_policy_on;
                     writeFile << "\t" << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_; //132~134
-                    writeFile << "\t" << walking_tick_hk_;
+                    writeFile << "\t" << walking_tick_hk_ << "\t"; //135
+
+                    Eigen::Quaterniond q;
+                    q.x() = rd_cc_.q_virtual_(3);
+                    q.y() = rd_cc_.q_virtual_(4);
+                    q.z() = rd_cc_.q_virtual_(5);
+                    q.w() = rd_cc_.q_virtual_(MODEL_DOF_QVIRTUAL-1);
+                    for (int i=0; i<3; i++)
+                        v_global(i) = rd_cc_.q_dot_virtual_(i);
+                    for (int i=0; i<3; i++)
+                        w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
+                    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
+                    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
+                    writeFile << v_local.transpose() << "\t"; //136
+                    writeFile << w_local.transpose() << "\t"; //139
                 
                     writeFile << std::endl;
 
@@ -1147,6 +1196,15 @@ void CustomController::computeSlow()
 
             for (int i = 0; i < 12; i++)
             {
+                if (locking_joint_(i) == 1)
+                {
+                    torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
+                    std::cout << "locking joint : " << i << std::endl;
+                    std::cout << "q_init_(" << i << ") : " << q_init_(i) << std::endl;
+                    std::cout << "q_noise_(" << i << ") : " << q_noise_(i) << std::endl;
+                    std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
+
+                }
                 if (disable_torque_(i) == 1)
                 {
                     torque_rl_(i) = 0.0;
