@@ -10,7 +10,7 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
     {
         if (is_on_robot_)
         {
-            writeFile.open("/home/dyros/catkin_ws/src/tocabi_cc/result/data.csv", std::ofstream::out | std::ofstream::app);
+            writeFile.open("/home/dyros/catkin_ws/HK/exp_data/data.csv", std::ofstream::out | std::ofstream::app);
         }
         else
         {
@@ -23,7 +23,7 @@ CustomController::CustomController(RobotData &rd) : rd_(rd) //, wbc_(dc.wbc_)
 
     joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &CustomController::joyCallback, this);
     // mujoco_ext_force_apply_pub = nh_.advertise<std_msgs::Float32MultiArray>("/tocabi_avatar/applied_ext_force", 10);
-    mujoco_ext_force_apply_pub = nh_.advertise<mujoco_ros_msgs::applyforce>("/mujoco_ros_interface/applied_ext_force", 10);
+    // mujoco_ext_force_apply_pub = nh_.advertise<mujoco_ros_msgs::applyforce>("/mujoco_ros_interface/applied_ext_force", 10);
     // mujoco_applied_ext_force_.data.resize(7);
 }
 
@@ -864,8 +864,8 @@ void CustomController::processObservation()
         v_global(i) = rd_cc_.q_dot_virtual_(i);
     for (int i=0; i<3; i++)
         w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
-    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
-    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
+    v_local = q.toRotationMatrix().transpose() * v_global;
+    w_local = q.toRotationMatrix().transpose() * w_global;
 
     // for (int i=0; i<6; i++)
     // {
@@ -1106,54 +1106,59 @@ void CustomController::computeSlow()
                 std::cout << "Value :" << value_ << std::endl;
             }
 
+            // using clock = std::chrono::high_resolution_clock;
+            // auto t_start = clock::now();   // 시작 시간
             if (is_write_file_)
             {
+                    // writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t"; // 1
+                    // writeFile << phase_ << "\t"; // 2
+                    // writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/100.0, 0.0, 1/100.0) << "\t"; //phase modulation //3
+
+                    // writeFile << rd_cc_.LF_FT.transpose() << "\t";    //4~9   
+                    // writeFile << rd_cc_.RF_FT.transpose() << "\t";    //10~15 
+                    // writeFile << rd_cc_.LF_CF_FT.transpose() << "\t"; //16~21
+                    // writeFile << rd_cc_.RF_CF_FT.transpose() << "\t"; //22~27 
+
+                    // writeFile << rd_cc_.torque_desired.transpose()  << "\t"; // 28~60
+                    // writeFile << q_noise_.transpose() << "\t"; // 61~93
+                    // writeFile << q_dot_lpf_.transpose() << "\t"; // 94~126
+                    // // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t"; //127~165 ?  //127: x_vel
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose()(0) << "\t"; //127  x_vel
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose()(1) << "\t"; //128  y_vel
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose()(2) << "\t"; //129  z_vel
+                    // // writeFile << rd_cc_.q_virtual_.transpose() << "\t"; //173~205
+
+                    // writeFile << value_ << "\t" << stop_by_value_thres_; //130~131
+                    // // writeFile << value_ << "\t" << stop_by_value_thres_ << "\t" << balance_value_ << "\t"; //130~131
+                    // // writeFile << (float)loco_policy_on;
+                    // writeFile << "\t" << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_; //132~134
+                    // writeFile << "\t" << walking_tick_hk_ << "\t"; //135
+
+                    // writeFile << v_local.transpose() << "\t"; //136
+                    // writeFile << w_local.transpose() << "\t"; //139
+                    // writeFile << euler_angle_.transpose(); //142
+                    // writeFile << locking_joint_.transpose() << "\t"; //145
+                    // writeFile << disable_torque_.transpose() << "\t"; //157
+                    // writeFile << joint_status_.transpose() << "\t"; //169
+                    // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
+
                     writeFile << (rd_cc_.control_time_us_ - time_inference_pre_)/1e6 << "\t"; // 1
                     writeFile << phase_ << "\t"; // 2
                     writeFile << DyrosMath::minmax_cut(rl_action_(num_action-1)*1/100.0, 0.0, 1/100.0) << "\t"; //phase modulation //3
-
                     writeFile << rd_cc_.LF_FT.transpose() << "\t";    //4~9   
                     writeFile << rd_cc_.RF_FT.transpose() << "\t";    //10~15 
                     writeFile << rd_cc_.LF_CF_FT.transpose() << "\t"; //16~21
                     writeFile << rd_cc_.RF_CF_FT.transpose() << "\t"; //22~27 
-
-                    writeFile << rd_cc_.torque_desired.transpose()  << "\t"; // 28~60
-                    writeFile << q_noise_.transpose() << "\t"; // 61~93
-                    writeFile << q_dot_lpf_.transpose() << "\t"; // 94~126
-                    // writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t"; //127~165 ?  //127: x_vel
-                    writeFile << rd_cc_.q_dot_virtual_.transpose()(0) << "\t"; //127  x_vel
-                    writeFile << rd_cc_.q_dot_virtual_.transpose()(1) << "\t"; //128  y_vel
-                    writeFile << rd_cc_.q_dot_virtual_.transpose()(2) << "\t"; //129  z_vel
-                    // writeFile << rd_cc_.q_virtual_.transpose() << "\t"; //173~205
-
-                    writeFile << value_ << "\t" << stop_by_value_thres_; //130~131
-                    // writeFile << value_ << "\t" << stop_by_value_thres_ << "\t" << balance_value_ << "\t"; //130~131
-                    // writeFile << (float)loco_policy_on;
-                    writeFile << "\t" << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_; //132~134
-                    writeFile << "\t" << walking_tick_hk_ << "\t"; //135
-
-                    Eigen::Quaterniond q;
-                    q.x() = rd_cc_.q_virtual_(3);
-                    q.y() = rd_cc_.q_virtual_(4);
-                    q.z() = rd_cc_.q_virtual_(5);
-                    q.w() = rd_cc_.q_virtual_(MODEL_DOF_QVIRTUAL-1);
-                    for (int i=0; i<3; i++)
-                        v_global(i) = rd_cc_.q_dot_virtual_(i);
-                    for (int i=0; i<3; i++)
-                        w_global(i) = rd_cc_.q_dot_virtual_(i+3);    
-                    Eigen::Vector3d v_local = q.toRotationMatrix().transpose() * v_global;
-                    Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
-                    writeFile << v_local.transpose() << "\t"; //136
-                    writeFile << w_local.transpose() << "\t"; //139
-                    writeFile << euler_angle_.transpose(); //142
-                
-
-                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
+                    writeFile << value_ << "\t" << stop_by_value_thres_ << "\t"; //28~29
+                    writeFile << target_vel_x_ << "\t" << target_vel_y_ << "\t" << target_vel_yaw_ << "\t"; //30~32
+                    writeFile << v_local.transpose() << "\t" << w_local.transpose() << "\t"; //33~38
                     writeFile << std::endl;
 
                     time_write_pre_ = rd_cc_.control_time_us_;
             }
-            
+            // auto t_end = clock::now();     // 끝 시간
+            // auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
+            // std::cout << "[LOG] Logging took " << duration_us << " us" << std::endl;
             time_inference_pre_ = rd_cc_.control_time_us_;
         }
 
@@ -1196,23 +1201,30 @@ void CustomController::computeSlow()
         }
         else
         {
-
             for (int i = 0; i < 12; i++)
             {
                 if (locking_joint_(i) == 1)
                 {
                     torque_rl_(i) = kp_(i,i) * (q_init_(i) - q_noise_(i)) - kv_(i,i)*q_vel_noise_(i);
-                    std::cout << "locking joint : " << i << std::endl;
-                    std::cout << "q_init_(" << i << ") : " << q_init_(i) << std::endl;
-                    std::cout << "q_noise_(" << i << ") : " << q_noise_(i) << std::endl;
-                    std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
-
+                    if(walking_tick_hk_ % 500 == 0)
+                    {
+                        std::cout << "locking joint : " << i << std::endl;
+                        std::cout << "q_init_(" << i << ") : " << q_init_(i) << std::endl;
+                        std::cout << "q_noise_(" << i << ") : " << q_noise_(i) << std::endl;
+                        std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
+                    }
                 }
                 if (disable_torque_(i) == 1)
                 {
                     torque_rl_(i) = 0.0;
+                    if(walking_tick_hk_ % 500 == 0)
+                    {
+                        std::cout << "disable torque : " << i << std::endl;
+                        std::cout << "torque_rl_(" << i << ") : " << torque_rl_(i) << std::endl;
+                    }
                 }
             }
+            
 
             rd_.torque_desired = torque_rl_;
             
@@ -1259,50 +1271,50 @@ void CustomController::computeSlow()
             // ext_force_tick_ = 0;
         }
 
-        if(ext_force_tick_ < ext_force_apply_time_ && ext_force_flag){
-                mujoco_applied_ext_force_.wrench.force.x = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
-                mujoco_applied_ext_force_.wrench.force.y = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
-                mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
-                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
-                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
-                mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+        // if(ext_force_tick_ < ext_force_apply_time_ && ext_force_flag){
+        //         mujoco_applied_ext_force_.wrench.force.x = force_temp_*sin(theta_temp_*DEG2RAD); //x-axis linear force
+        //         mujoco_applied_ext_force_.wrench.force.y = -force_temp_*cos(theta_temp_*DEG2RAD); //y-axis linear force  
+        //         mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+        //         mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+        //         mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+        //         mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
 
-                mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+        //         mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
 
-                mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
-                ext_force_tick_++;
-        }
-        else{
-            ext_force_tick_ = 0;
-            ext_force_flag = false;
-            // ext_force_flag_X_ = false;
-            // ext_force_flag_Y_ = false;
-            // ext_force_flag_A_ = false;
-            // ext_force_flag_B_ = false; 
-            mujoco_applied_ext_force_.wrench.force.x = 0; //x-axis linear force
-            mujoco_applied_ext_force_.wrench.force.y = 0; //y-axis linear force  
-            mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
-            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
-            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
-            mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
+        //         mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        //         ext_force_tick_++;
+        // }
+        // else{
+        //     ext_force_tick_ = 0;
+        //     ext_force_flag = false;
+        //     // ext_force_flag_X_ = false;
+        //     // ext_force_flag_Y_ = false;
+        //     // ext_force_flag_A_ = false;
+        //     // ext_force_flag_B_ = false; 
+        //     mujoco_applied_ext_force_.wrench.force.x = 0; //x-axis linear force
+        //     mujoco_applied_ext_force_.wrench.force.y = 0; //y-axis linear force  
+        //     mujoco_applied_ext_force_.wrench.force.z = 0.0; //z-axis linear force
+        //     mujoco_applied_ext_force_.wrench.torque.x = 0.0; //x-axis angular moment
+        //     mujoco_applied_ext_force_.wrench.torque.x = 0.0; //y-axis angular moment
+        //     mujoco_applied_ext_force_.wrench.torque.x = 0.0; //z-axis angular moment
 
-            mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
+        //     mujoco_applied_ext_force_.link_idx = 1; //link idx; 1:pelvis
 
-            mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
-        }
+        //     mujoco_ext_force_apply_pub.publish(mujoco_applied_ext_force_);
+        // }
 
-        if(walking_tick_hk_ % 500 == 0)
-        {
-            std::cout << "walking_tick_hk_ : " << walking_tick_hk_ << std::endl;
-            std::cout << "phase : " << phase_ << std::endl;
-            std::cout << "target_vel_x_ : " << target_vel_x_ << std::endl;
-            std::cout << "target_vel_y_ : " << target_vel_y_ << std::endl;
-            std::cout << "target_vel_yaw_ : " << target_vel_yaw_ << std::endl;
-            std::cout << "ext_force_flag :" << ext_force_flag << std::endl;
-            std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
-            std::cout << "value_ : " << value_ << std::endl;
-            // std::cout << "balance_value_ : " << balance_value_ << std::endl;
-        }
+        // if(walking_tick_hk_ % 500 == 0)
+        // {
+        //     std::cout << "walking_tick_hk_ : " << walking_tick_hk_ << std::endl;
+        //     std::cout << "phase : " << phase_ << std::endl;
+        //     std::cout << "target_vel_x_ : " << target_vel_x_ << std::endl;
+        //     std::cout << "target_vel_y_ : " << target_vel_y_ << std::endl;
+        //     std::cout << "target_vel_yaw_ : " << target_vel_yaw_ << std::endl;
+        //     std::cout << "ext_force_flag :" << ext_force_flag << std::endl;
+        //     std::cout << "ext_force_tick_ : " << ext_force_tick_ << std::endl;
+        //     std::cout << "value_ : " << value_ << std::endl;
+        //     // std::cout << "balance_value_ : " << balance_value_ << std::endl;
+        // }
 
         walking_tick_hk_++;
     }
