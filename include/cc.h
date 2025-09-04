@@ -7,7 +7,7 @@
 #include <sensor_msgs/Joy.h>
 #include <std_msgs/Float32MultiArray.h>
 
-#include <mujoco_ros_msgs/applyforce.h>
+// #include <mujoco_ros_msgs/applyforce.h>
 
 class CustomController
 {
@@ -49,7 +49,7 @@ public:
     static const int num_state = num_cur_internal_state*num_state_hist+num_action*(num_state_hist-1);
     static const int num_hidden = 256;
 
-    
+    Eigen::Vector3d v_global, w_global, v_local, w_local;
 
     Eigen::MatrixXd policy_net_w0_;
     Eigen::MatrixXd policy_net_b0_;
@@ -112,7 +112,7 @@ public:
 
     float phase_ = 0.0;
 
-    bool is_on_robot_ = false;
+    bool is_on_robot_ = true;
     bool is_write_file_ = true;
     Eigen::Matrix<double, MODEL_DOF, 1> q_dot_lpf_;
 
@@ -156,10 +156,11 @@ public:
 
     Eigen::VectorXd joint_status_;
     Eigen::VectorXd disable_torque_;
+    Eigen::VectorXd locking_joint_;
 
     ros::Publisher mujoco_ext_force_apply_pub;
     // std_msgs::Float32MultiArray mujoco_applied_ext_force_;
-    mujoco_ros_msgs::applyforce mujoco_applied_ext_force_;
+    // mujoco_ros_msgs::applyforce mujoco_applied_ext_force_;
     double force_temp_ = 0;
     double theta_temp_ = 0;
     bool ext_force_flag = false;
