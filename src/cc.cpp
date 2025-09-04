@@ -804,6 +804,7 @@ void CustomController::processObservation()
     }
 
     float squat_duration = 1.7995;
+    action_dt_accumulate_ = 0;
     phase_ = std::fmod((rd_cc_.control_time_us_-start_time_)/1e6 + action_dt_accumulate_, squat_duration) / squat_duration;
 
     state_cur_(data_idx) = sin(2*M_PI*phase_);
