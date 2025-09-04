@@ -1145,7 +1145,10 @@ void CustomController::computeSlow()
                     Eigen::Vector3d w_local = q.toRotationMatrix().transpose() * w_global;
                     writeFile << v_local.transpose() << "\t"; //136
                     writeFile << w_local.transpose() << "\t"; //139
+                    writeFile << euler_angle_.transpose(); //142
                 
+
+                    writeFile << rd_cc_.q_dot_virtual_.transpose() << "\t";
                     writeFile << std::endl;
 
                     time_write_pre_ = rd_cc_.control_time_us_;
