@@ -182,7 +182,7 @@ public:
     double hz_ = 2000.0;
     bool loco_policy_on = true;
 
-    bool random_fault_injection_ = true;
+    bool random_fault_injection_ = false;
 
 private:
     Eigen::VectorQd ControlVal_;
